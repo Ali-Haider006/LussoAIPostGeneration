@@ -52,6 +52,9 @@ def fetch_response(prompt, model):
                 }
             ],
         )
+        # if post.error:
+        #     print("An error occurred while making the request")
+        #     raise
         return post.content
     except:
         print("An error occurred while making the request")
@@ -62,9 +65,9 @@ async def generate_post(item: Item):
     # sometimes haulicinates for in website shoping as website is gentting mentioned otherwise good
     # without hashtags: Generate a polished social media post for {item.smapp}, approximately {item.length} words long. The post is for the business {item.bzname} and aims to {item.purpose}, targeting {item.targetAudience}. Use a {item.preferredTone} tone and incorporate only the provided information. Do not include hashtags, meta-comments, or fabricated details. The business website is {item.website}. Focus solely on the provided information to create a professional and publishable post.
     # with hashtags: Generate a polished social media post for {item.smapp}, approximately {item.length} words long. The post is for the business {item.bzname} and aims to {item.purpose}, targeting {item.targetAudience}. Use a {item.preferredTone} tone and incorporate only the provided information. Include a few relevant and creative hashtags for better visibility. The business website is {item.website}. Avoid adding extra commentary or fabricated details.
-    prompt = f"Write a professional social media post for {item.smapp}, about {item.length} words long, for the business {item.bzname}. The post should achieve the goal: {item.purpose}, targeting {item.targetAudience}, and using a {item.preferredTone} tone. Use the website {item.website} naturally and do not include hashtags."
+    prompt = f"Write a professional social media post for {item.smapp}, about {item.length} words long, for the business {item.bzname}. The post should achieve the goal: {item.purpose}, targeting {item.targetAudience}, and using a {item.preferredTone} tone. Use the website {item.website} naturally. Donot include any introductory or opening or ending or closing text and do not include hashtags."
     if item.hashtags:
-        prompt = f"Write a professional social media post for {item.smapp}, about {item.length} words long, for the business {item.bzname}. The post should achieve the goal: {item.purpose}, targeting {item.targetAudience}, and using a {item.preferredTone} tone. Use the website {item.website} naturally and include relevant hashtags."
+        prompt = f"Write a professional social media post for {item.smapp}, about {item.length} words long, for the business {item.bzname}. The post should achieve the goal: {item.purpose}, targeting {item.targetAudience}, and using a {item.preferredTone} tone. Use the website {item.website} naturally and include relevant hashtags. Donot include any introductory or opening or ending or closing text."
     
     # TODO: Moderation for prompt to be added
 
