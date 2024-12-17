@@ -37,7 +37,6 @@ app.add_middleware(
 )
 
 class Item(BaseModel):
-    smapp: str
     length: Annotated[int, Field(strict=True, ge=10, le=700)]  # Ensure word length is reasonable
     bzname: str
     purpose: str
@@ -47,15 +46,35 @@ class Item(BaseModel):
     hashtags: bool
     model: str
 
-def build_prompt(item: Item) -> str:
+class RegenerationItem(BaseModel):
+    post: str
+    suggestion: str
+    length: Annotated[int, Field(strict=True, ge=10, le=700)]  # Ensure word length is reasonable
+    bzname: str
+    purpose: str
+    targetAudience: str
+    preferredTone: str
+    website: str  
+    model: str
+
+def build_prompt_generation(item: Item) -> str:
     base_prompt = (
-        f"Write a professional social media post for {item.smapp}, about {item.length} words long, "
+        f"Write a professional social media post, about {item.length} words long, "
         f"for the business {item.bzname}. The post should achieve the goal: {item.purpose}, targeting {item.targetAudience}, "
         f"and using a {item.preferredTone} tone. Use the website {item.website} naturally."
     )
     if item.hashtags:
         return base_prompt + " Include relevant hashtags. Donot include any introductory or opening or ending or closing text."
     return base_prompt + " Do not include hashtags. Donot include any introductory or opening or ending or closing text."
+
+def build_prompt_regeneration(item: RegenerationItem) -> str:
+    return (
+        f"Rewrite and improve the social media post, about {item.length} words long, for the business {item.bzname}.",
+        f"The post aims to achieve: {item.purpose}, targeting {item.targetAudience}, and using a {item.preferredTone} tone. The business website is {item.website}",
+        f"Here is the previous post:{item.post}",
+        f"Feedback or suggestion for improvement: {item.suggestion}",
+        f"Regenerate the post based on this feedback while ensuring it adheres to the original instructions and aligns with the given purpose, target audience, and tone.",
+    )
 
 def fetch_response(prompt: str, model: str) -> str:
     try:
@@ -80,7 +99,7 @@ def fetch_response(prompt: str, model: str) -> str:
 
 @app.post("/api/generate-post")
 async def generate_post(item: Item):
-    prompt = build_prompt(item)
+    prompt = build_prompt_generation(item)
     logger.info(f"Generating post with prompt: {prompt}")
     try:
         post = fetch_response(prompt, item.model)
@@ -90,6 +109,19 @@ async def generate_post(item: Item):
     except Exception as e:
         logger.error(f"Unhandled error: {e}")
         raise HTTPException(status_code=500, detail="Unable to generate post")
+    
+@app.post("/api/regenerate-post")
+async def generate_post(item: Item):
+    prompt = build_prompt_regeneration(item)
+    logger.info(f"Regenerating post with prompt: {prompt}")
+    try:
+        post = fetch_response(prompt, item.model)
+        return {"post": post}
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"Unhandled error: {e}")
+        raise HTTPException(status_code=500, detail="Unable to regenerate post")
 
 @app.get("/test")
 async def test_endpoint():
