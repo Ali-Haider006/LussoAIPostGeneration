@@ -47,6 +47,7 @@ class Item(BaseModel):
     hashtags: bool
     model: str
 
+#Updated Schema for Regeneration
 class RegenerationItem(BaseModel):
     post: str
     suggestion: str
@@ -62,6 +63,8 @@ def build_prompt_generation(item: Item) -> str:
         return base_prompt + " Include relevant hashtags. Do not include any introductory or opening or ending or closing text."
     return base_prompt + " Do not include hashtags. Do not include any introductory or opening or ending or closing text."
 
+
+#Prompt Engineering According to Figma Design
 def build_prompt_regeneration(item: RegenerationItem) -> str:
     return (
         f"Rewrite and improve the social media post,"
@@ -104,6 +107,8 @@ async def generate_post(item: Item):
         logger.error(f"Unhandled error: {e}")
         raise HTTPException(status_code=500, detail="Unable to generate post")
     
+
+ #Regeneration Definition Updated   
 @app.post("/api/regenerate-post")
 async def regenerate_post(item: RegenerationItem):
     prompt = build_prompt_regeneration(item)
