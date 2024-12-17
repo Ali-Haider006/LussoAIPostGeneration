@@ -64,10 +64,10 @@ def build_prompt_generation(item: Item) -> str:
 
 def build_prompt_regeneration(item: RegenerationItem) -> str:
     return (
-        f"Rewrite and improve the social media post",
-        f"Here is the previous post:{item.post}",
-        f"Feedback or suggestion for improvement: {item.suggestion}",
-        f"Regenerate the post based on this feedback while ensuring it adheres to the original instructions and aligns with the given purpose, and tone.",
+        f"Rewrite and improve the social media post,"
+        f"Here is the previous post:{item.post},"
+        f"Feedback or suggestion for improvement: {item.suggestion},"
+        f"Regenerate the post based on this feedback while ensuring it adheres to the original instructions and aligns with the given purpose, and tone."
     )
 
 def fetch_response(prompt: str, model: str) -> str:
@@ -79,7 +79,7 @@ def fetch_response(prompt: str, model: str) -> str:
             messages=[
                 {
                     "role": "user",
-                    "content": prompt,
+                    "content": prompt
                 }
             ],
         )
@@ -105,7 +105,7 @@ async def generate_post(item: Item):
         raise HTTPException(status_code=500, detail="Unable to generate post")
     
 @app.post("/api/regenerate-post")
-async def regenerate_post(item: Item):
+async def regenerate_post(item: RegenerationItem):
     prompt = build_prompt_regeneration(item)
     logger.info(f"Regenerating post with prompt: {prompt}")
     try:
