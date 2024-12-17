@@ -50,6 +50,7 @@ class Item(BaseModel):
 class RegenerationItem(BaseModel):
     post: str
     suggestion: str
+    model: str
 
 def build_prompt_generation(item: Item) -> str:
     base_prompt = (
