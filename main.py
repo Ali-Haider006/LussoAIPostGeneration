@@ -42,7 +42,6 @@ class Item(BaseModel):
     length: Annotated[int, Field(strict=True, ge=10, le=700)]  # Ensure word length is reasonable
     bzname: str
     purpose: str
-    targetAudience: str
     preferredTone: str
     website: str  
     hashtags: bool
@@ -51,18 +50,11 @@ class Item(BaseModel):
 class RegenerationItem(BaseModel):
     post: str
     suggestion: str
-    length: Annotated[int, Field(strict=True, ge=10, le=700)]  # Ensure word length is reasonable
-    bzname: str
-    purpose: str
-    targetAudience: str
-    preferredTone: str
-    website: str  
-    model: str
 
 def build_prompt_generation(item: Item) -> str:
     base_prompt = (
         f"Write a professional social media post, about {item.length} words long, "
-        f"for the business {item.bzname}. The post should achieve the goal: {item.purpose}, targeting {item.targetAudience}, "
+        f"for the business {item.bzname}. The post should achieve the goal: {item.purpose}, "
         f"and using a {item.preferredTone} tone. Use the website {item.website} naturally."
     )
     if item.hashtags:
@@ -71,11 +63,10 @@ def build_prompt_generation(item: Item) -> str:
 
 def build_prompt_regeneration(item: RegenerationItem) -> str:
     return (
-        f"Rewrite and improve the social media post, about {item.length} words long, for the business {item.bzname}.",
-        f"The post aims to achieve: {item.purpose}, targeting {item.targetAudience}, and using a {item.preferredTone} tone. The business website is {item.website}",
+        f"Rewrite and improve the social media post",
         f"Here is the previous post:{item.post}",
         f"Feedback or suggestion for improvement: {item.suggestion}",
-        f"Regenerate the post based on this feedback while ensuring it adheres to the original instructions and aligns with the given purpose, target audience, and tone.",
+        f"Regenerate the post based on this feedback while ensuring it adheres to the original instructions and aligns with the given purpose, and tone.",
     )
 
 def fetch_response(prompt: str, model: str) -> str:
