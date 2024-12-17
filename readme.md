@@ -11,8 +11,8 @@
 Clone the project repository using the following command:
 
 ```bash
-git clone 'repose_url'
-cd 'repo_name'
+git clone https://github.com/Ali-Haider006/LussoAIPostGeneration.git
+cd LussoAIPostGeneration
 ```
 
 ### 2. Create a Virtual Environment
