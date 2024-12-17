@@ -66,8 +66,8 @@ def build_prompt_generation(item: Item) -> str:
         f"and using a {item.preferredTone} tone. Use the website {item.website} naturally."
     )
     if item.hashtags:
-        return base_prompt + " Include relevant hashtags. Donot include any introductory or opening or ending or closing text."
-    return base_prompt + " Do not include hashtags. Donot include any introductory or opening or ending or closing text."
+        return base_prompt + " Include relevant hashtags. Do not include any introductory or opening or ending or closing text."
+    return base_prompt + " Do not include hashtags. Do not include any introductory or opening or ending or closing text."
 
 def build_prompt_regeneration(item: RegenerationItem) -> str:
     return (
@@ -113,7 +113,7 @@ async def generate_post(item: Item):
         raise HTTPException(status_code=500, detail="Unable to generate post")
     
 @app.post("/api/regenerate-post")
-async def generate_post(item: Item):
+async def regenerate_post(item: Item):
     prompt = build_prompt_regeneration(item)
     logger.info(f"Regenerating post with prompt: {prompt}")
     try:
