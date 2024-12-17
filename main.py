@@ -1,3 +1,5 @@
+# No Third person except AI-Team is allowed to run this code. No changes in this code are allowed except by approval from AI Team
+#Moderation API will be implemented once This application will be in production.
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
