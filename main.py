@@ -82,7 +82,7 @@ def build_prompt_regeneration(item: RegenerationItem) -> str:
     else:
         base_prompt += "Improve the post generally by enhancing creativity, clarity, and engagement. "
 
-    return base_prompt + "Regenerate the post based on this feedback while ensuring it adheres to the original instructions and aligns with the given purpose, and tone. Do not include any introductory or opening or ending or closing text just give ma post text that can be directly posted."
+    return base_prompt + "Regenerate the post based on this feedback while ensuring it adheres to the original instructions and aligns with the given purpose, and tone. Do not include any introductory or opening or ending or closing text just give me post text that can be directly posted."
 
 def fetch_response(prompt: str, model: str) -> str:
     try:
