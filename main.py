@@ -2,8 +2,8 @@
 # Moderation API will be implemented once This application will be in production.
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
-from typing_extensions import Annotated
+from pydantic import BaseModel, Field, root_validator, ValidationError
+from typing_extensions import Annotated, Optional
 import anthropic
 import os
 from dotenv import load_dotenv
@@ -41,37 +41,47 @@ app.add_middleware(
 class Item(BaseModel):
     length: Annotated[int, Field(strict=True, ge=10, le=700)]  # Ensure word length is reasonable
     bzname: str
-    purpose: str
+    purpose: str 
     preferredTone: str
     website: str  
     hashtags: bool
     model: str
 
-#Updated Schema for Regeneration
+    @root_validator(pre=True)
+    def validate_purpose(cls, values):
+        purpose = values.get("purpose")
+        if purpose and len(purpose.split()) < 10:
+            raise ValueError("Purpose must be at least 10 words long.")
+        return values
+
+# Updated Schema for Regeneration
 class RegenerationItem(BaseModel):
     post: str
-    suggestion: str
+    suggestion: Optional[str] = None 
     model: str
 
 def build_prompt_generation(item: Item) -> str:
     base_prompt = (
         f"Write a professional social media post, about {item.length} words long, "
         f"for the business {item.bzname}. The post should achieve the goal: {item.purpose}, "
-        f"and using a {item.preferredTone} tone. Use the website {item.website} naturally."
+        f"and using a {item.preferredTone} tone. Use the website {item.website} naturally. "
     )
     if item.hashtags:
-        return base_prompt + " Include relevant hashtags. Do not include any introductory or opening or ending or closing text."
-    return base_prompt + " Do not include hashtags. Do not include any introductory or opening or ending or closing text."
+        return base_prompt + "Include relevant hashtags. Do not include any introductory or opening or ending or closing text."
+    return base_prompt + "Do not include hashtags. Do not include any introductory or opening or ending or closing text."
 
-
-#Prompt Engineering According to Figma Design
 def build_prompt_regeneration(item: RegenerationItem) -> str:
-    return (
-        f"Rewrite and improve the social media post,"
-        f"Here is the previous post:{item.post},"
-        f"Feedback or suggestion for improvement: {item.suggestion},"
-        f"Regenerate the post based on this feedback while ensuring it adheres to the original instructions and aligns with the given purpose, and tone."
+    base_prompt = (
+        f"Rewrite and improve the social media post, "
+        f"Here is the previous post:{item.post}, "
     )
+
+    if item.suggestion:
+        base_prompt += f"Feedback or suggestion for improvement: {item.suggestion}. "
+    else:
+        base_prompt += "Improve the post generally by enhancing creativity, clarity, and engagement. "
+
+    return base_prompt + "Regenerate the post based on this feedback while ensuring it adheres to the original instructions and aligns with the given purpose, and tone. Do not include any introductory or opening or ending or closing text."
 
 def fetch_response(prompt: str, model: str) -> str:
     try:
@@ -89,7 +99,7 @@ def fetch_response(prompt: str, model: str) -> str:
         if hasattr(response, "error") and response.error:
             logger.error(f"Anthropic API error: {response.error}")
             raise ValueError("Error in API response")
-        return response.content
+        return response
     except Exception as e:
         logger.error(f"Error while fetching response: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
@@ -100,7 +110,11 @@ async def generate_post(item: Item):
     logger.info(f"Generating post with prompt: {prompt}")
     try:
         post = fetch_response(prompt, item.model)
-        return {"post": post}
+        return {
+            "post": post.content, 
+            "input_tokens": post.usage.input_tokens,
+            "output_tokens": post.usage.output_tokens,    
+        }
     except HTTPException as http_exc:
         raise http_exc
     except Exception as e:
@@ -108,14 +122,18 @@ async def generate_post(item: Item):
         raise HTTPException(status_code=500, detail="Unable to generate post")
     
 
-#Regeneration Definition Updated   
+ #Regeneration Definition Updated   
 @app.post("/api/regenerate-post")
 async def regenerate_post(item: RegenerationItem):
     prompt = build_prompt_regeneration(item)
     logger.info(f"Regenerating post with prompt: {prompt}")
     try:
         post = fetch_response(prompt, item.model)
-        return {"post": post}
+        return {
+            "post": post.content, 
+            "input_tokens": post.usage.input_tokens,
+            "output_tokens": post.usage.output_tokens,    
+        }
     except HTTPException as http_exc:
         raise http_exc
     except Exception as e:
