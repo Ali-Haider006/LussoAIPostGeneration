@@ -1,5 +1,5 @@
 # No Third person except AI-Team is allowed to run this code. No changes in this code are allowed except by approval from AI Team
-#Moderation API will be implemented once This application will be in production.
+# Moderation API will be implemented once This application will be in production.
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -108,7 +108,7 @@ async def generate_post(item: Item):
         raise HTTPException(status_code=500, detail="Unable to generate post")
     
 
- #Regeneration Definition Updated   
+#Regeneration Definition Updated   
 @app.post("/api/regenerate-post")
 async def regenerate_post(item: RegenerationItem):
     prompt = build_prompt_regeneration(item)
