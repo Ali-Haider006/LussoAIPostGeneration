@@ -60,7 +60,7 @@ class Item(BaseModel):
 class RegenerationItem(BaseModel):
     post: str
     suggestion: Optional[str] = None 
-    model: str
+    model: Annotated[str, Field(min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
 
 def build_prompt_generation(item: Item) -> str:
     base_prompt = (
