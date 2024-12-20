@@ -39,13 +39,15 @@ app.add_middleware(
 )
 
 class Item(BaseModel):
-    length: Annotated[int, Field(strict=True, ge=10, le=700)]  # Ensure word length is reasonable
+    length: Annotated[int, Field(strict=True, ge=10, le=700)] = 150  # Ensure word length is reasonable
     bzname: str
     purpose: str 
     preferredTone: str
     website: str  
     hashtags: bool
-    model: str
+    # model: Annotated[str] = "claude-3-5-haiku-20241022"
+    model: Annotated[str, Field(min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"  # Default model value
+
 
     @root_validator(pre=True)
     def validate_purpose(cls, values):
