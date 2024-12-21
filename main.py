@@ -1,6 +1,4 @@
-# No Third person except AI-Team is allowed to run this code. No changes in this code are allowed except by approval from AI Team
-# Moderation API will be implemented once This application will be in production.
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Form, File, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, root_validator, ValidationError
 from typing_extensions import Annotated, Optional
@@ -45,9 +43,7 @@ class Item(BaseModel):
     preferredTone: str
     website: str  
     hashtags: bool
-    # model: Annotated[str] = "claude-3-5-haiku-20241022"
     model: Annotated[str, Field(min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"  # Default model value
-
 
     @root_validator(pre=True)
     def validate_purpose(cls, values):
@@ -106,8 +102,27 @@ def fetch_response(prompt: str, model: str) -> str:
         logger.error(f"Error while fetching response: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
+# Change the endpoints to accept form-data
+
 @app.post("/api/generate-post")
-async def generate_post(item: Item):
+async def generate_post(
+    length: Annotated[int, Form(..., ge=10, le=700)] = 150,
+    bzname: str = Form(...),
+    purpose: str = Form(...),
+    preferredTone: str = Form(...),
+    website: str = Form(...),
+    hashtags: bool = Form(...),
+    model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
+):
+    item = Item(
+        length=length,
+        bzname=bzname,
+        purpose=purpose,
+        preferredTone=preferredTone,
+        website=website,
+        hashtags=hashtags,
+        model=model
+    )
     prompt = build_prompt_generation(item)
     logger.info(f"Generating post with prompt: {prompt}")
     try:
@@ -122,11 +137,15 @@ async def generate_post(item: Item):
     except Exception as e:
         logger.error(f"Unhandled error: {e}")
         raise HTTPException(status_code=500, detail="Unable to generate post")
-    
 
- #Regeneration Definition Updated   
+#Regeneration Endpoint Update
 @app.post("/api/regenerate-post")
-async def regenerate_post(item: RegenerationItem):
+async def regenerate_post(
+    post: str = Form(...),
+    suggestion: Optional[str] = Form(None),
+    model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
+):
+    item = RegenerationItem(post=post, suggestion=suggestion, model=model)
     prompt = build_prompt_regeneration(item)
     logger.info(f"Regenerating post with prompt: {prompt}")
     try:
