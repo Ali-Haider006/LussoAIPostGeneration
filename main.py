@@ -10,6 +10,9 @@ import os
 from dotenv import load_dotenv
 import logging
 import requests
+import base64
+# from PIL import Image
+# import rembg
 
 load_dotenv()
 
@@ -48,6 +51,7 @@ class Item(BaseModel):
     preferredTone: str
     website: str  
     hashtags: bool
+    color_theme: str
     model: Annotated[str, Field(min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"  # Default model value
 
     @root_validator(pre=True)
@@ -79,6 +83,42 @@ def build_prompt_tagline(item: Item, post: str) -> str:
         f"and using a {item.preferredTone} tone. "
     )
     return base_prompt + "Do not include any introductory or opening or ending or closing text."
+
+def build_image_prompt(item: Item, tagline: str) -> str:
+    refined_prompt = (
+        f"Create a high-quality, professional social media advertisement poster for the following product: "
+        f"Brand Name: '{item.bzname}' and Product Description: '{tagline}'. "
+        f"The design should use the exact color palette: {item.color_theme}. "
+        f"Strictly include only the following text in the image: '{item.bzname}' and '{tagline}'. "
+        "No extra text, watermarks, or unrelated elements should appear in the image. "
+        "Focus on a clean, minimalistic design with a professional, modern aesthetic. "
+        "Use balanced typography, harmonious color integration, and a visually appealing layout to create a striking advertisement."
+    )
+    return refined_prompt
+
+def build_static_image_prompt(post_content: str, tagline: str, bzname: str, color_theme: str) -> str:
+    return (
+        f"Professional {color_theme} advertisement: {post_content}. "
+        f"Modern minimalist design with '{bzname}' in bold {color_theme} text, centered. "
+        f"Below, '{tagline}' in clean typography. "
+        "Elegant composition, balanced layout, 8K quality, commercial photography style. "
+        "Sharp text, high contrast, professional lighting."
+    )
+
+def build_dynamic_image_prompt(post_content: str, tagline: str, color_theme: str) -> str:
+    return (
+        f"Generate a prompt for a high-quality, visually appealing social media advertisement image. "
+        f"Ask to strictly include only the following text in the image the tagline: '{tagline}', and ask the model it should be visually distinct, engaging, and a central part of the design. "
+        f"Tagline is must and should be in the image no matter what and prompt should put every emphasis on including tagline this tagline in image: '{tagline}' in generated image. "
+        f"Focus on the content theme: '{post_content}' to ensure the image aligns with the overall message. "
+        f"Use the color theme: {color_theme} as the primary palette, ensuring the colors dominate the design while remaining harmonious and professional. "
+        "The design must prioritize the business name and tagline as key visual elements, integrating them seamlessly into the layout. "
+        "Ask not to include extra text, watermarks, or unrelated elements in the image. "
+        "Describe specific visual elements and composition, emphasizing balance, modern aesthetics, and alignment with the provided text. "
+        "While generating prompt keep in mind all the knowledge you have about prompt engineering and specially prompt engineering for image generation models. "
+        "Use techniques like quality boosters, weighted terms, style modifiers and other prompt engineering techniques. "
+        "Do not include any introductory or opening or ending or closing text; provide only the prompt needed for generating the advertisement image."
+    )
 
 #Prompt Engineering According to Figma Design
 def build_prompt_regeneration(item: RegenerationItem) -> str:
@@ -114,19 +154,8 @@ def fetch_response(prompt: str, model: str) -> str:
     except Exception as e:
         logger.error(f"Error while fetching response: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
-    
-def build_image_prompt(item: Item, tagline: str) -> str:
-    refined_prompt = (
-        f"Design an eye-catching, modern social media advertisement poster for a product. "
-        f"Brand Name: '{item.bzname}' should be very visible and stand out. "
-        f"Product Description: '{tagline}', emphasizing the product's unique features. "
-        "Generate a compelling, catchy tagline that appeals to the audience and aligns with the brand's voice. "
-        "The ad should feature a clean, minimalistic layout with balanced colors and typography that conveys professionalism and high quality. "
-        "Ensure the design is engaging, with the brand name prominently displayed, the tagline capturing attention, and the overall style modern and visually striking."
-    )
-    return refined_prompt
 
-def fetch_image_response(item: Item, tagline: str, model: str):
+def fetch_image_response(image_prompt: str, model: str):
     try:
         response = requests.post(
             f"https://api.stability.ai/v2beta/stable-image/generate/{model}",
@@ -136,21 +165,18 @@ def fetch_image_response(item: Item, tagline: str, model: str):
             },
             files={"none": ''},
             data={
-                "prompt": build_image_prompt(item, tagline),
+                "prompt": image_prompt,
                 "output_format": "jpeg",
             },
         )
         if response.status_code == 200:
             return response.content
-        raise HTTPException(status_code=500, detail="Unable to generate image") 
+        raise HTTPException(status_code=response.status_code, detail="Unable to generate image") 
     except HTTPException as http_exc:
         raise http_exc
 
 
 # Change the endpoints to accept form-data
-
-# Change the endpoints to accept form-data
-
 @app.post("/api/generate-post")
 async def generate_post(
     length: Annotated[int, Form(..., ge=10, le=700)] = 150,
@@ -159,6 +185,7 @@ async def generate_post(
     preferredTone: str = Form(...),
     website: str = Form(...),
     hashtags: bool = Form(...),
+    color_theme: str = Form(...),
     model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
 ):
     item = Item(
@@ -168,17 +195,37 @@ async def generate_post(
         preferredTone=preferredTone,
         website=website,
         hashtags=hashtags,
+        color_theme=color_theme,
         model=model
     )
     prompt = build_prompt_generation(item)
     logger.info(f"Generating post with prompt: {prompt}")
     try:
         post = fetch_response(prompt, item.model)
+
+        tagline_prompt = build_prompt_tagline(item, post.content[0].text)
+        logger.info(f"Generating tagline with prompt: {tagline_prompt}")
+        
+        tagline = fetch_response(tagline_prompt, item.model).content[0].text
+        logger.info(f"Generated tagline: {tagline}")
+        
         image_model = "ultra"
-        tagline = ""
-        image = fetch_image_response(item, tagline, image_model)
+        image_prompt_dynamic = build_dynamic_image_prompt(post.content[0].text, tagline, item.color_theme)
+
+        image_prompt = fetch_response(image_prompt_dynamic, item.model).content[0].text
+        # image_prompt = build_static_image_prompt(post.content[0].text, tagline, item.bzname, item.color_theme)
+
+        logger.info(f"Generated image prompt: {image_prompt}")
+
+        image = fetch_image_response(image_prompt, image_model)
+        image_base64 = base64.b64encode(image).decode('utf-8')
+        # Save the image to a file for testing
+        with open("./gen_post_2.jpeg", 'wb') as file:
+            file.write(image)
         return {
-            "post": post.content, 
+            "post": post.content[0].text, 
+            "tagline": tagline,
+            "image": image_base64,	
             "input_tokens": post.usage.input_tokens,
             "output_tokens": post.usage.output_tokens,    
         }
@@ -201,7 +248,7 @@ async def regenerate_post(
     try:
         post = fetch_response(prompt, item.model)
         return {
-            "post": post.content, 
+            "post": post.content[0].text, 
             "input_tokens": post.usage.input_tokens,
             "output_tokens": post.usage.output_tokens,    
         }
