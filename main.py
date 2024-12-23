@@ -1,6 +1,7 @@
 # No Third person except AI-Team is allowed to run this code. No changes in this code are allowed except by approval from AI Team
-#Moderation API will be implemented once This application will be in production.
-from fastapi import FastAPI, HTTPException, Request
+# Moderation API will be implemented once This application will be in production.
+
+from fastapi import FastAPI, HTTPException, Form, File, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, root_validator, ValidationError
 from typing_extensions import Annotated, Optional
@@ -41,13 +42,13 @@ app.add_middleware(
 )
 
 class Item(BaseModel):
-    length: Annotated[int, Field(strict=True, ge=10, le=700)]  # Ensure word length is reasonable
+    length: Annotated[int, Field(strict=True, ge=10, le=700)] = 150  # Ensure word length is reasonable
     bzname: str
     purpose: str 
     preferredTone: str
     website: str  
     hashtags: bool
-    model: str
+    model: Annotated[str, Field(min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"  # Default model value
 
     @root_validator(pre=True)
     def validate_purpose(cls, values):
@@ -60,7 +61,7 @@ class Item(BaseModel):
 class RegenerationItem(BaseModel):
     post: str
     suggestion: Optional[str] = None 
-    model: str
+    model: Annotated[str, Field(min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
 
 def build_prompt_generation(item: Item) -> str:
     base_prompt = (
@@ -146,8 +147,29 @@ def fetch_image_response(item: Item, tagline: str, model: str):
         raise http_exc
 
 
+# Change the endpoints to accept form-data
+
+# Change the endpoints to accept form-data
+
 @app.post("/api/generate-post")
-async def generate_post(item: Item):
+async def generate_post(
+    length: Annotated[int, Form(..., ge=10, le=700)] = 150,
+    bzname: str = Form(...),
+    purpose: str = Form(...),
+    preferredTone: str = Form(...),
+    website: str = Form(...),
+    hashtags: bool = Form(...),
+    model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
+):
+    item = Item(
+        length=length,
+        bzname=bzname,
+        purpose=purpose,
+        preferredTone=preferredTone,
+        website=website,
+        hashtags=hashtags,
+        model=model
+    )
     prompt = build_prompt_generation(item)
     logger.info(f"Generating post with prompt: {prompt}")
     try:
@@ -165,11 +187,15 @@ async def generate_post(item: Item):
     except Exception as e:
         logger.error(f"Unhandled error: {e}")
         raise HTTPException(status_code=500, detail="Unable to generate post")
-    
 
- #Regeneration Definition Updated   
+#Regeneration Endpoint Update
 @app.post("/api/regenerate-post")
-async def regenerate_post(item: RegenerationItem):
+async def regenerate_post(
+    post: str = Form(...),
+    suggestion: Optional[str] = Form(None),
+    model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
+):
+    item = RegenerationItem(post=post, suggestion=suggestion, model=model)
     prompt = build_prompt_regeneration(item)
     logger.info(f"Regenerating post with prompt: {prompt}")
     try:
