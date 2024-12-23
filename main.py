@@ -8,6 +8,7 @@ import anthropic
 import os
 from dotenv import load_dotenv
 import logging
+import requests
 
 load_dotenv()
 
@@ -17,9 +18,10 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
-if not ANTHROPIC_API_KEY:
-    logger.error("ANTHROPIC_API_KEY not found in environment variables.")
-    raise ValueError("ANTHROPIC_API_KEY is required")
+STABILITY_API_KEY = os.environ.get("STABILITY_API_KEY")
+if not ANTHROPIC_API_KEY or not STABILITY_API_KEY:
+    logger.error("ANTHROPIC_API_KEY or STABILITY_API_KEY not found in environment variables.")
+    raise ValueError("ANTHROPIC_API_KEY and STABILITY_API_KEY is required")
 
 try:
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
@@ -70,6 +72,13 @@ def build_prompt_generation(item: Item) -> str:
         return base_prompt + "Include relevant hashtags. Do not include any introductory or opening or ending or closing text."
     return base_prompt + "Do not include hashtags. Do not include any introductory or opening or ending or closing text."
 
+def build_prompt_tagline(item: Item, post: str) -> str:
+    base_prompt = (
+        f"Write a professional tagline for the post {post}, maximum 6 words long, "
+        f"and using a {item.preferredTone} tone. "
+    )
+    return base_prompt + "Do not include any introductory or opening or ending or closing text."
+
 #Prompt Engineering According to Figma Design
 def build_prompt_regeneration(item: RegenerationItem) -> str:
     base_prompt = (
@@ -104,6 +113,38 @@ def fetch_response(prompt: str, model: str) -> str:
     except Exception as e:
         logger.error(f"Error while fetching response: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
+    
+def build_image_prompt(item: Item, tagline: str) -> str:
+    refined_prompt = (
+        f"Design an eye-catching, modern social media advertisement poster for a product. "
+        f"Brand Name: '{item.bzname}' should be very visible and stand out. "
+        f"Product Description: '{tagline}', emphasizing the product's unique features. "
+        "Generate a compelling, catchy tagline that appeals to the audience and aligns with the brand's voice. "
+        "The ad should feature a clean, minimalistic layout with balanced colors and typography that conveys professionalism and high quality. "
+        "Ensure the design is engaging, with the brand name prominently displayed, the tagline capturing attention, and the overall style modern and visually striking."
+    )
+    return refined_prompt
+
+def fetch_image_response(item: Item, tagline: str, model: str):
+    try:
+        response = requests.post(
+            f"https://api.stability.ai/v2beta/stable-image/generate/{model}",
+            headers={
+                "authorization": f"Bearer {STABILITY_API_KEY}",
+                "accept": "image/*"
+            },
+            files={"none": ''},
+            data={
+                "prompt": build_image_prompt(item, tagline),
+                "output_format": "jpeg",
+            },
+        )
+        if response.status_code == 200:
+            return response.content
+        raise HTTPException(status_code=500, detail="Unable to generate image") 
+    except HTTPException as http_exc:
+        raise http_exc
+
 
 @app.post("/api/generate-post")
 async def generate_post(item: Item):
@@ -111,6 +152,9 @@ async def generate_post(item: Item):
     logger.info(f"Generating post with prompt: {prompt}")
     try:
         post = fetch_response(prompt, item.model)
+        image_model = "ultra"
+        tagline = ""
+        image = fetch_image_response(item, tagline, image_model)
         return {
             "post": post.content, 
             "input_tokens": post.usage.input_tokens,
