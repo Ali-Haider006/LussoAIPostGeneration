@@ -14,6 +14,6 @@ class Item(BaseModel):
     @root_validator(pre=True)
     def validate_purpose(cls, values):
         purpose = values.get("purpose")
-        if purpose and len(purpose.split()) < 10:
-            raise ValueError("Purpose must be at least 10 words long.")
+        if purpose and len(purpose.split()) < 5:
+            raise ValueError("Purpose must be at least 5 words long.")
         return values
