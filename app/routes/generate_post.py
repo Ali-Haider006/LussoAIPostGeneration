@@ -44,7 +44,7 @@ async def generate_post(
         image_model = "ultra"
         image_prompt_dynamic = build_dynamic_image_prompt(post.content[0].text, tagline, item.color_theme)
 
-        image_prompt = fetch_response(image_prompt_dynamic, item.model).content[0].text
+        image_prompt = fetch_response(image_prompt_dynamic, "claude-3-5-sonnet-20241022").content[0].text
         # image_prompt = build_static_image_prompt(post.content[0].text, tagline, item.bzname, item.color_theme)
 
         logger.info(f"Generated image prompt: {image_prompt}")
@@ -52,7 +52,7 @@ async def generate_post(
         image = fetch_image_response(image_prompt, image_model)
         image_base64 = base64.b64encode(image).decode('utf-8')
         # Save the image to a file for testing
-        with open("./gen_post_2.jpeg", 'wb') as file:
+        with open("./gen_post_7.jpeg", 'wb') as file:
             file.write(image)
         return {
             "post": post.content[0].text, 

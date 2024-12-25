@@ -55,14 +55,15 @@ def build_static_image_prompt(post_content: str, tagline: str, bzname: str, colo
 def build_dynamic_image_prompt(post_content: str, tagline: str, color_theme: str) -> str:
     return (
         f"Generate a prompt for a high-quality, visually appealing social media advertisement image. "
-        f"Ask to strictly include only the following text in the image the tagline: '{tagline}', and ask the model it should be visually distinct, engaging, and a central part of the design. "
-        f"Tagline is must and should be in the image no matter what and prompt should put every emphasis on including tagline this tagline in image: '{tagline}' in generated image. "
+        f"Use the exact words; 'First overlay these Words' in generated prompt to include the exact following text in the image: '{tagline}'. "
         f"Focus on the content theme: '{post_content}' to ensure the image aligns with the overall message. "
         f"Use the color theme: {color_theme} as the primary palette, ensuring the colors dominate the design while remaining harmonious and professional. "
-        "The design must prioritize the business name and tagline as key visual elements, integrating them seamlessly into the layout. "
+        f"First part of prompt should be text instruction followed by color theme and then rest, also put high empahize that text should be there in generated image. "
+        "The design must prioritize the text and then color theme as key visual elements, integrating them seamlessly into the layout. "
         "Ask not to include extra text, watermarks, or unrelated elements in the image. "
         "Describe specific visual elements and composition, emphasizing balance, modern aesthetics, and alignment with the provided text. "
         "While generating prompt keep in mind all the knowledge you have about prompt engineering and specially prompt engineering for image generation models. "
         "Use techniques like quality boosters, weighted terms, style modifiers and other prompt engineering techniques. "
+        "Please keep the generated prompt concise, clear and as short as possible. "
         "Do not include any introductory or opening or ending or closing text; provide only the prompt needed for generating the advertisement image."
     )
