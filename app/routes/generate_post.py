@@ -52,7 +52,7 @@ async def generate_post(
         image = fetch_image_response(image_prompt, image_model)
         image_base64 = base64.b64encode(image).decode('utf-8')
         # Save the image to a file for testing
-        with open("./gen_post_7.jpeg", 'wb') as file:
+        with open("./gen_post_10.jpeg", 'wb') as file:
             file.write(image)
         return {
             "post": post.content[0].text, 

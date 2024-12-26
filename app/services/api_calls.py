@@ -38,6 +38,7 @@ def fetch_image_response(image_prompt: str, model: str):
             files={"none": ''},
             data={
                 "prompt": image_prompt,
+                	
                 "output_format": "jpeg",
             },
         )

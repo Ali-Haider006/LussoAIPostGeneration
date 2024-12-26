@@ -13,8 +13,8 @@ def build_prompt_generation(item: Item) -> str:
 
 def build_prompt_tagline(item: Item, post: str) -> str:
     base_prompt = (
-        f"Write a professional tagline for the post {post}, maximum 6 words long, "
-        f"and using a {item.preferredTone} tone. "
+        f"Write a professional tagline for the post {post}, maximum 3 to 4 words long, "
+        f"and using a {item.preferredTone} tone. Do not include emojis and do not use punctuation. "
     )
     return base_prompt + "Do not include any introductory or opening or ending or closing text."
 
@@ -52,18 +52,35 @@ def build_static_image_prompt(post_content: str, tagline: str, bzname: str, colo
         "Sharp text, high contrast, professional lighting."
     )
 
-def build_dynamic_image_prompt(post_content: str, tagline: str, color_theme: str) -> str:
+def build_dynamic_image_prompt_prev(post_content: str, tagline: str, color_theme: str) -> str:
     return (
         f"Generate a prompt for a high-quality, visually appealing social media advertisement image. "
-        f"Use the exact words; 'First overlay these Words' in generated prompt to include the exact following text in the image: '{tagline}'. "
+        f"Prompt engineer to perfection to include the exact following text or words in the image: '{tagline.upper()}'. Do not specify fonts and other text related stuff. Use TEXT: '' to specify the text. "
         f"Focus on the content theme: '{post_content}' to ensure the image aligns with the overall message. "
         f"Use the color theme: {color_theme} as the primary palette, ensuring the colors dominate the design while remaining harmonious and professional. "
+        "Also use colors names instead of hex code values. Specify the layout, composition, and visual elements to create a compelling advertisement image that effectively conveys the message. "
         f"First part of prompt should be text instruction followed by color theme and then rest, also put high empahize that text should be there in generated image. "
-        "The design must prioritize the text and then color theme as key visual elements, integrating them seamlessly into the layout. "
-        "Ask not to include extra text, watermarks, or unrelated elements in the image. "
+        "Prompt layout should be that first it should specify the text then, image or background on which text is overlayed and at end theme or colors. "
         "Describe specific visual elements and composition, emphasizing balance, modern aesthetics, and alignment with the provided text. "
         "While generating prompt keep in mind all the knowledge you have about prompt engineering and specially prompt engineering for image generation models. "
         "Use techniques like quality boosters, weighted terms, style modifiers and other prompt engineering techniques. "
-        "Please keep the generated prompt concise, clear and as short as possible. "
+        "Please keep the generated prompt concise, clear and as short as possible, maximum of 30 to 35 words also please avoid heavy details in genrated prompt. "
         "Do not include any introductory or opening or ending or closing text; provide only the prompt needed for generating the advertisement image."
+    )
+
+def build_dynamic_image_prompt(post_content: str, tagline: str, color_theme: str) -> str:
+    return (
+        f"Generate a prompt for a high-quality, visually appealing social media advertisement image. "
+        f"Prompt engineer to perfection to include the exact following text or words in the image: '{tagline.upper()}'. Do not specify fonts and other text-related stuff. "
+        "Use these exact same words 'TEXT OVERLAY: '', with background' to specify the text, and with background should also be there. "
+        f"Ensure the text '{tagline.upper()}' is prominently visible, central to the design, and integrated harmoniously with the background. "
+        f"Focus on the content theme: '{post_content}' to ensure the image aligns with the overall message. "
+        f"Use the color theme: {color_theme} as the primary palette, ensuring the colors dominate the design while remaining harmonious and professional. "
+        "The text must be bold, bright, and well-lit, ensuring clear visibility against the background. "
+        "Also use colors names instead of hex code values. Specify the layout, composition, and visual elements to create a compelling advertisement image that effectively conveys the message. "
+        "Prompt layout should specify the text prominently, followed by the image or background description, and then the theme or colors. "
+        "Describe specific visual elements and composition, emphasizing balance, modern aesthetics, and alignment with the provided text. "
+        "Use techniques like quality boosters, weighted terms, style modifiers, and other prompt engineering techniques. "
+        "Please keep the generated prompt concise, clear, and as short as possible, with a maximum of 25 to 30 words. Avoid heavy details in the generated prompt. "
+        "Do not include any introductory, opening, ending, or closing text; provide only the prompt needed for generating the advertisement image."
     )
