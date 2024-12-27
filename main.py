@@ -3,7 +3,7 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import generate_post, regenerate_post, test
+from app.routes import generate_post, process_image, regenerate_post, test
 
 app = FastAPI()
 
@@ -18,5 +18,5 @@ app.add_middleware(
 
 app.include_router(generate_post.router, prefix="/api", tags=["Generate Post"])
 app.include_router(regenerate_post.router, prefix="/api", tags=["Regenerate Post"])
-# app.include_router(process_image.router, prefix="/api", tags=["Process Image"])
+app.include_router(process_image.router, prefix="/api", tags=["Process Image"])
 app.include_router(test.router, prefix="/test", tags=["Test"])

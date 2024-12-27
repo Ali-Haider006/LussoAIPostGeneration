@@ -38,7 +38,7 @@ async def generate_post(
         tagline_prompt = build_prompt_tagline(item, post.content[0].text)
         logger.info(f"Generating tagline with prompt: {tagline_prompt}")
         
-        tagline = fetch_response(tagline_prompt, item.model).content[0].text
+        tagline = fetch_response(tagline_prompt, "claude-3-5-sonnet-20241022").content[0].text
         logger.info(f"Generated tagline: {tagline}")
         
         image_model = "ultra"
@@ -52,7 +52,8 @@ async def generate_post(
         image = fetch_image_response(image_prompt, image_model)
         image_base64 = base64.b64encode(image).decode('utf-8')
         # Save the image to a file for testing
-        with open("./gen_post_10.jpeg", 'wb') as file:
+        image_name = f"./images/gen_post_{post.id}.jpeg"
+        with open(image_name, 'wb') as file:
             file.write(image)
         return {
             "post": post.content[0].text, 
