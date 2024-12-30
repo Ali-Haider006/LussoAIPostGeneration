@@ -49,9 +49,9 @@ async def regenerate_post(
         image_base64 = base64.b64encode(final_image_bytes).decode('utf-8')
 
         # Save the image to a file for testing
-        image_name = f"./overlayed_images/gen_post_{tagline}.jpeg"
-        with open(image_name, 'wb') as file:
-            file.write(final_image_bytes)
+        # image_name = f"./overlayed_images/gen_post_{tagline}.jpeg"
+        # with open(image_name, 'wb') as file:
+        #     file.write(final_image_bytes)
         return {
             "tagline": tagline,
             "image": image_base64,   
