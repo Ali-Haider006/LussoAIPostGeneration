@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Form, UploadFile
+from fastapi import APIRouter, HTTPException, Form, UploadFile, File
 from app.models.item import Item
 from app.services.prompt_building import build_prompt_generation, build_prompt_tagline
 from app.services.api_calls import fetch_response, fetch_image_response
@@ -19,7 +19,7 @@ async def generate_post(
     website: str = Form(...),
     hashtags: bool = Form(...),
     color_theme: Optional[str] = Form(None),
-    logo: UploadFile = Form(...),
+    logo: UploadFile = File(...),
     model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
 ):
     item = Item(
