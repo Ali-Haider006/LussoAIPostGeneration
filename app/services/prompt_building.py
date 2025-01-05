@@ -87,3 +87,22 @@ def build_dynamic_image_prompt(post_content: str, tagline: str, color_theme: str
         "Please keep the generated prompt concise, clear, and as short as possible, with a maximum of 25 to 30 words. Avoid heavy details in the generated prompt. "
         "Do not include any introductory, opening, ending, or closing text; provide only the prompt needed for generating the advertisement image."
     )
+
+def build_topics_gen_prompt(texts, no_of_topics):
+    full_text = "Analyze the following content from the user's past posts:\n\n "
+    n = 1
+    for text in texts:
+        full_text += f"Post {n}: '{text}', \n "
+        n = n + 1
+    full_text += f"Based on this analysis, generate {no_of_topics} unique and creative topics for future posts. Return the response as a JSON object in the following format:\n "
+    full_text += "{\n'topics':[\n'Topics 1',\n 'Topics 2',\n 'Topics 3']}\n "
+    full_text += "Ensure the topics are concise and relevant to the user's content style. "
+    return full_text + "Do not include any introductory, opening, ending, or closing text; provide only the prompt needed for generating the advertisement image."
+
+def build_prompt_bulk_generation(item: Item) -> str:
+    return (
+        f"Write a professional social media post, about {item.length} words long, "
+        f"for the business {item.bzname}. The topic of post is: {item.purpose}, "
+        f"and using a {item.preferredTone} tone. Use the website {item.website} naturally. "
+        "Include relevant hashtags. Do not include any introductory or opening or ending or closing text."
+    )
