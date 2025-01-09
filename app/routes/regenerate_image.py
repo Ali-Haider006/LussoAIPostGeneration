@@ -20,8 +20,11 @@ async def regenerate_post(
     hashtags: bool = Form(...),
     color_theme: Optional[str] = Form(None),
     logo: UploadFile = Form(...),
+    count: int = Form(...),
     model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022",
 ):
+    if count >= 2:
+        raise HTTPException(status_code=403, detail="Cannot regenerate more than 2 times")
     item = Item(
         length=length,
         bzname=bzname,

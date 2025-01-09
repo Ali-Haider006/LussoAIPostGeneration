@@ -11,8 +11,11 @@ router = APIRouter()
 async def regenerate_post(
     post: str = Form(...),
     suggestion: Optional[str] = Form(None),
+    count: int = Form(...),
     model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
 ):
+    if count >= 2:
+        raise HTTPException(status_code=403, detail="Cannot regenerate more than 2 times")
     item = RegenerationItem(post=post, suggestion=suggestion, model=model)
     prompt = build_prompt_regeneration(item)
     logger.info(f"Regenerating post with prompt: {prompt}")
