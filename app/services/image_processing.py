@@ -1,7 +1,9 @@
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont, ImageStat
 import rembg
 import extcolors
 import io
+import random
+import math
 
 def remove_background(image_bytes: bytes) -> Image.Image:
     try:
@@ -57,4 +59,92 @@ def overlay_logo(base_image_bytes, logo_bytes, position="bottom-right"):
     output_buffer.seek(0)
 
     return output_buffer.read()
+
+def get_contrasting_text_color(bg_color):
+    brightness = (0.299 * bg_color[0] + 0.587 * bg_color[1] + 0.114 * bg_color[2])
+    return (255, 255, 255) if brightness < 128 else (0, 0, 0)
+
+def wrap_text(draw, text, font, max_width):
+    lines = []
+    words = text.split()
+    while words:
+        line = words.pop(0)
+        while words and draw.textlength(line + ' ' + words[0], font=font) <= max_width:
+            line += ' ' + words.pop(0)
+        lines.append(line)
+    return '\n'.join(lines)
+
+def add_text_overlay(image_path, text, bg_color):
+    bg_color = bg_color.lstrip('#')
+    bg_color = tuple(int(bg_color[i:i+2], 16) for i in (0, 2, 4))
+    image = Image.open(io.BytesIO(image_path)).convert("RGBA")
+    width, height = image.size
     
+    bg_width = int(width * 0.7)
+    bg_height = int(height * 0.2)
+    bg_x = 0
+    bg_y = int(height * 0.15)
+    
+    overlay = Image.new("RGBA", image.size, (255, 255, 255, 0))
+    draw = ImageDraw.Draw(overlay)
+    
+    fade_start = int(bg_width * 0.8)  # Start fade later
+    base_alpha = 230  # Increased base opacity
+    
+    for i in range(bg_width):
+        if i < fade_start:
+            # Less variation in the solid part
+            alpha = base_alpha - (i / fade_start) * 10
+        else:
+            # Steeper fade out but still smooth
+            alpha = base_alpha * (1 - ((i - fade_start) / (bg_width - fade_start)) ** 0.95)
+            
+        # Subtle vertical gradient
+        for j in range(bg_height):
+            vert_alpha = alpha * (0.95 + 0.05 * math.sin(j / bg_height * math.pi))
+            draw.rectangle(
+                [bg_x + i, bg_y + j, bg_x + i + 1, bg_y + j + 1],
+                fill=(*bg_color, int(vert_alpha)),
+            )
+    
+    font_size = 1
+    font = ImageFont.truetype("NotoSans-Medium.ttf", font_size)
+    max_width, max_height = int(bg_width * 0.95), int(bg_height * 0.8)
+    
+    while True:
+        font = ImageFont.truetype("NotoSans-Medium.ttf", font_size)
+        wrapped_text = wrap_text(draw, text, font, max_width)
+        text_width, text_height = draw.textbbox((0, 0), wrapped_text, font=font)[2:]
+        if text_width > max_width or text_height > max_height:
+            break
+        font_size += 1
+    
+    font_size -= 1
+    font = ImageFont.truetype("NotoSans-Medium.ttf", font_size)
+    wrapped_text = wrap_text(draw, text, font, max_width)
+    
+    text_x = bg_x + 25
+    text_y = bg_y + (bg_height - draw.textbbox((0, 0), wrapped_text, font=font)[3]) // 2
+    text_color = get_contrasting_text_color(bg_color)
+    draw.text((text_x, text_y), wrapped_text, fill=text_color, font=font)
+    
+    combined = Image.alpha_composite(image, overlay)
+    combined = combined.convert("RGB")
+    
+    output_buffer = io.BytesIO()
+    combined.save(output_buffer, format="PNG")
+    output_buffer.seek(0)
+    return output_buffer.read()
+
+def generate_random_hex_color():
+    red = random.randint(50, 200)
+    green = random.randint(50, 200)
+    blue = random.randint(50, 200)
+
+    base_color = (red, green, blue)
+    variation=0.6
+
+    brightened_color = tuple(int(base + (255 - base) * variation) for base in base_color)
+
+    hex_color = "#" + "".join(f"{value:02X}" for value in brightened_color)
+    return hex_color
