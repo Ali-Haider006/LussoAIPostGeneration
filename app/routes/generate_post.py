@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Form, UploadFile, File
 from app.models.item import Item
 from app.services.prompt_building import build_prompt_generation, build_prompt_tagline
 from app.services.api_calls import fetch_response, fetch_image_response
-from app.services.image_processing import overlay_logo
+from app.services.image_processing import overlay_logo, add_text_overlay, generate_random_hex_color
 from typing_extensions import Annotated, Optional
 from app.core.logger import logger
 import base64
@@ -47,21 +47,27 @@ async def generate_post(
         image_prompt_dynamic = build_dynamic_image_prompt(post.content[0].text, tagline, item.color_theme)
 
         image_prompt = fetch_response(image_prompt_dynamic, "claude-3-5-sonnet-20241022").content[0].text
-        # image_prompt = build_static_image_prompt(post.content[0].text, tagline, item.bzname, item.color_theme)
 
         logger.info(f"Generated image prompt: {image_prompt}")
 
         image = fetch_image_response(image_prompt, image_model)
 
+        if not item.color_theme or item.color_theme == "vibrant color theme" or "#" not in item.color_theme:
+            image_color_theme = generate_random_hex_color()
+        else:
+            image_color_theme = item.color_theme.split(",")[0].strip()
+
+        text_image = add_text_overlay(image, tagline, image_color_theme)
+
         logo_bytes = await logo.read()
-        final_image_bytes = overlay_logo(image, logo_bytes)
+        final_image_bytes = overlay_logo(text_image, logo_bytes)
 
         image_base64 = base64.b64encode(final_image_bytes).decode('utf-8')
 
         # Save the image to a file for testing
-        # image_name = f"./overlayed_images/gen_post_{post.id}.jpeg"
-        # with open(image_name, 'wb') as file:
-        #     file.write(final_image_bytes)
+        image_name = f"./overlayed_images/gen_post_{post.id}.jpeg"
+        with open(image_name, 'wb') as file:
+            file.write(final_image_bytes)
         return {
             "post": post.content[0].text, 
             "tagline": tagline,
