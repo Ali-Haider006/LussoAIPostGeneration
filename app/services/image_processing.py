@@ -75,6 +75,8 @@ def wrap_text(draw, text, font, max_width):
     return '\n'.join(lines)
 
 def add_text_overlay(image_path, text, bg_color):
+    position = random.choice(["top-left", "center-left", "bottom-left"])
+
     bg_color = bg_color.lstrip('#')
     bg_color = tuple(int(bg_color[i:i+2], 16) for i in (0, 2, 4))
     image = Image.open(io.BytesIO(image_path)).convert("RGBA")
@@ -83,23 +85,25 @@ def add_text_overlay(image_path, text, bg_color):
     bg_width = int(width * 0.7)
     bg_height = int(height * 0.2)
     bg_x = 0
-    bg_y = int(height * 0.15)
+    if position == "top-left":
+        bg_y = int(height * 0.15)
+    elif position == "center-left":
+        bg_y = int(height * 0.5 - bg_height * 0.5)
+    else:
+        bg_y = int(height * 0.75)
     
     overlay = Image.new("RGBA", image.size, (255, 255, 255, 0))
     draw = ImageDraw.Draw(overlay)
     
-    fade_start = int(bg_width * 0.8)  # Start fade later
-    base_alpha = 230  # Increased base opacity
+    fade_start = int(bg_width * 0.8) 
+    base_alpha = 230 
     
     for i in range(bg_width):
         if i < fade_start:
-            # Less variation in the solid part
             alpha = base_alpha - (i / fade_start) * 10
         else:
-            # Steeper fade out but still smooth
             alpha = base_alpha * (1 - ((i - fade_start) / (bg_width - fade_start)) ** 0.95)
             
-        # Subtle vertical gradient
         for j in range(bg_height):
             vert_alpha = alpha * (0.95 + 0.05 * math.sin(j / bg_height * math.pi))
             draw.rectangle(

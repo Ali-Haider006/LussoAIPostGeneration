@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException, Form, UploadFile, File
+from fastapi import APIRouter, HTTPException, Form
 from app.models.item import Item
 from app.services.prompt_building import build_prompt_generation, build_prompt_tagline
 from app.services.api_calls import fetch_response, fetch_image_response
 from app.services.image_processing import overlay_logo, add_text_overlay, generate_random_hex_color
 from typing_extensions import Annotated, Optional
+from app.utils.download_image_from_url import download_image_from_url
 from app.core.logger import logger
 import base64
 from app.services.prompt_building import build_dynamic_image_prompt
@@ -19,7 +20,7 @@ async def generate_post(
     website: str = Form(...),
     hashtags: bool = Form(...),
     color_theme: Optional[str] = Form(None),
-    logo: UploadFile = File(...),
+    logo: str = Form(...),
     model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
 ):
     item = Item(
@@ -59,7 +60,7 @@ async def generate_post(
 
         text_image = add_text_overlay(image, tagline, image_color_theme)
 
-        logo_bytes = await logo.read()
+        logo_bytes = await download_image_from_url(logo)
         final_image_bytes = overlay_logo(text_image, logo_bytes)
 
         image_base64 = base64.b64encode(final_image_bytes).decode('utf-8')

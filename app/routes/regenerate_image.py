@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException, Form, UploadFile
+from fastapi import APIRouter, HTTPException, Form
 from app.services.prompt_building import build_prompt_tagline, build_dynamic_image_prompt
 from app.services.api_calls import fetch_response, fetch_image_response
 from app.services.image_processing import overlay_logo
 from typing_extensions import Annotated, Optional
+from app.utils.download_image_from_url import download_image_from_url
 from app.core.logger import logger
 from app.models.item import Item
 import base64
@@ -19,7 +20,7 @@ async def regenerate_post(
     website: str = Form(...),
     hashtags: bool = Form(...),
     color_theme: Optional[str] = Form(None),
-    logo: UploadFile = Form(...),
+    logo: str = Form(...),
     count: int = Form(...),
     model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022",
 ):
@@ -46,7 +47,7 @@ async def regenerate_post(
         logger.info(f"Generated image prompt: {image_prompt}")
 
         image = fetch_image_response(image_prompt, image_model)
-        logo_bytes = await logo.read()
+        logo_bytes = await download_image_from_url(logo)
         final_image_bytes = overlay_logo(image, logo_bytes)
 
         image_base64 = base64.b64encode(final_image_bytes).decode('utf-8')
