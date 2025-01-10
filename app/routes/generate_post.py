@@ -1,11 +1,13 @@
+import boto3
 from fastapi import APIRouter, HTTPException, Form, UploadFile, File
 from app.models.item import Item
 from app.services.prompt_building import build_prompt_generation, build_prompt_tagline
 from app.services.api_calls import fetch_response, fetch_image_response
 from app.services.image_processing import overlay_logo, add_text_overlay, generate_random_hex_color
+from app.services.s3 import upload_image_to_s3, BUCKET_NAME
 from typing_extensions import Annotated, Optional
 from app.core.logger import logger
-import base64
+import uuid  # For generating unique image names
 from app.services.prompt_building import build_dynamic_image_prompt
 
 router = APIRouter()
@@ -62,16 +64,17 @@ async def generate_post(
         logo_bytes = await logo.read()
         final_image_bytes = overlay_logo(text_image, logo_bytes)
 
-        image_base64 = base64.b64encode(final_image_bytes).decode('utf-8')
+        # Generate unique image name
+        image_name = f"gen_post_{uuid.uuid4().hex}.jpeg"
+        # Upload image to S3
+        upload_image_to_s3(final_image_bytes, image_name) 
+        # Generate S3 URL
+        s3_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{image_name}"
 
-        # Save the image to a file for testing
-        image_name = f"./overlayed_images/gen_post_{post.id}.jpeg"
-        with open(image_name, 'wb') as file:
-            file.write(final_image_bytes)
         return {
             "post": post.content[0].text, 
             "tagline": tagline,
-            "image": image_base64,	
+            "image_url": s3_url,  # Return the S3 URL instead of Base64
             "input_tokens": post.usage.input_tokens,
             "output_tokens": post.usage.output_tokens,    
         }
