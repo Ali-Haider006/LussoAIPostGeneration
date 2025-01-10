@@ -96,10 +96,10 @@ async def bulk_generate_post(
                 "image_url": s3_url,	
             })
 
-            image_name = f"./imagesp3/gen_post_{post_res.id}.jpeg"
-            with open(image_name, 'wb') as file:
-                file.write(final_image_bytes)
-                file.close()
+            # image_name = f"./imagesp3/gen_post_{post_res.id}.jpeg"
+            # with open(image_name, 'wb') as file:
+            #     file.write(final_image_bytes)
+            #     file.close()
             
         
         return {
