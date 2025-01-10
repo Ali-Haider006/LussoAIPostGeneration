@@ -69,7 +69,7 @@ def build_dynamic_image_prompt_prev(post_content: str, tagline: str, color_theme
         "Do not include any introductory or opening or ending or closing text; provide only the prompt needed for generating the advertisement image."
     )
 
-def build_dynamic_image_prompt(post_content: str, tagline: str, color_theme: str) -> str:
+def build_dynamic_image_prompt(post_content: str, color_theme: str) -> str:
     return (
         f"Generate a prompt for a high-quality, visually appealing social media advertisement image. "
         f"Prompt engineer to perfection. Give the highest weight to the quality. "

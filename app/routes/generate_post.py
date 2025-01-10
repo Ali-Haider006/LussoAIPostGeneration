@@ -1,9 +1,4 @@
-<<<<<<< HEAD
-from fastapi import APIRouter, HTTPException, Form
-=======
-import boto3
 from fastapi import APIRouter, HTTPException, Form, UploadFile, File
->>>>>>> 53d5639c44d0cde491ef473f1db04ef47f71c6a4
 from app.models.item import Item
 from app.services.prompt_building import build_prompt_generation, build_prompt_tagline
 from app.services.api_calls import fetch_response, fetch_image_response
@@ -51,7 +46,7 @@ async def generate_post(
         logger.info(f"Generated tagline: {tagline}")
         
         image_model = "ultra"
-        image_prompt_dynamic = build_dynamic_image_prompt(post.content[0].text, tagline, item.color_theme)
+        image_prompt_dynamic = build_dynamic_image_prompt(post.content[0].text, item.color_theme)
 
         image_prompt = fetch_response(image_prompt_dynamic, "claude-3-5-sonnet-20241022").content[0].text
 

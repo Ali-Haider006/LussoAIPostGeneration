@@ -1,6 +1,6 @@
 import boto3
 from app.core.logger import logger
-from app.core.config import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION_NAME,BUCKET_NAME
+from app.core.config import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION_NAME, BUCKET_NAME
 from fastapi import HTTPException
 
 

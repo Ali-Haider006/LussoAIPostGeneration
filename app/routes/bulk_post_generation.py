@@ -2,13 +2,15 @@ from fastapi import APIRouter, HTTPException, Form, UploadFile, File
 from app.models.item import Item
 from app.services.prompt_building import build_prompt_bulk_generation, build_prompt_tagline, build_topics_gen_prompt
 from app.services.api_calls import fetch_response, fetch_image_response
-from app.services.image_processing import overlay_logo
+from app.services.image_processing import overlay_logo, add_text_overlay, generate_random_hex_color
 from app.services.text_processing import find_all_texts
 from data import data
 from typing_extensions import Annotated, Optional
 from app.core.logger import logger
 import base64
+import uuid
 from app.services.prompt_building import build_dynamic_image_prompt
+from app.services.s3 import upload_image_to_s3, BUCKET_NAME
 import json
 
 router = APIRouter()
@@ -63,7 +65,7 @@ async def bulk_generate_post(
             logger.info(f"Generated tagline: {tagline}")
 
             image_model = "ultra"
-            image_prompt_dynamic = build_dynamic_image_prompt(post_res.content[0].text, tagline, item.color_theme)
+            image_prompt_dynamic = build_dynamic_image_prompt(post_res.content[0].text, item.color_theme)
 
             image_prompt = fetch_response(image_prompt_dynamic, "claude-3-5-sonnet-20241022").content[0].text
 
@@ -71,15 +73,29 @@ async def bulk_generate_post(
 
             image = fetch_image_response(image_prompt, image_model)
 
-            final_image_bytes = overlay_logo(image, logo_bytes)
+            if not item.color_theme or item.color_theme == "vibrant color theme" or "#" not in item.color_theme:
+                image_color_theme = generate_random_hex_color()
+            else:
+                image_color_theme = item.color_theme.split(",")[0].strip()
+
+            text_image = add_text_overlay(image, tagline, image_color_theme)
+
+            final_image_bytes = overlay_logo(text_image, logo_bytes)
 
             image_base64 = base64.b64encode(final_image_bytes).decode('utf-8')
+
+            # Generate unique image name
+            image_name = f"gen_post_{uuid.uuid4().hex}.jpeg"
+            # Upload image to S3
+            upload_image_to_s3(final_image_bytes, image_name) 
+            # Generate S3 URL
+            s3_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{image_name}"
 
             posts.append({
                 "topic": topic, 
                 "post": post_res.content[0].text,
                 "tagline": tagline,
-                "image": image_base64,	
+                "image_url": s3_url,	
             })
 
             image_name = f"./images/gen_post_{post_res.id}.jpeg"
