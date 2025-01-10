@@ -6,8 +6,8 @@ from app.services.image_processing import overlay_logo, add_text_overlay, genera
 from app.services.text_processing import find_all_texts
 from data import data
 from typing_extensions import Annotated, Optional
+from app.utils.download_image_from_url import download_image_from_url
 from app.core.logger import logger
-import base64
 import uuid
 from app.services.prompt_building import build_dynamic_image_prompt
 from app.services.s3 import upload_image_to_s3, BUCKET_NAME
@@ -24,7 +24,7 @@ async def bulk_generate_post(
     hashtags: bool = Form(...),
     color_theme: Optional[str] = Form(None),
     number_of_posts: Annotated[int, Form(..., ge=1, le=30)] = 10,
-    logo: UploadFile = File(...),
+    logo: str = Form(...),
     model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
 ):
     item = Item(
@@ -48,7 +48,7 @@ async def bulk_generate_post(
         output_tokens += topics_res.usage.output_tokens
         topics = json.loads(topics_res.content[0].text)
         posts = []
-        logo_bytes = await logo.read()
+        logo_bytes = await download_image_from_url(logo)
 
         for topic in topics["topics"]:
             item.purpose = topic
@@ -82,8 +82,6 @@ async def bulk_generate_post(
 
             final_image_bytes = overlay_logo(text_image, logo_bytes)
 
-            image_base64 = base64.b64encode(final_image_bytes).decode('utf-8')
-
             # Generate unique image name
             image_name = f"gen_post_{uuid.uuid4().hex}.jpeg"
             # Upload image to S3
@@ -98,7 +96,7 @@ async def bulk_generate_post(
                 "image_url": s3_url,	
             })
 
-            image_name = f"./images/gen_post_{post_res.id}.jpeg"
+            image_name = f"./imagesp3/gen_post_{post_res.id}.jpeg"
             with open(image_name, 'wb') as file:
                 file.write(final_image_bytes)
                 file.close()
