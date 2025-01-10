@@ -1,16 +1,17 @@
-from fastapi import APIRouter, HTTPException, Form, UploadFile
+from fastapi import APIRouter, HTTPException, Form, UploadFile, File
+import uuid
 from app.services.prompt_building import build_prompt_tagline, build_dynamic_image_prompt
 from app.services.api_calls import fetch_response, fetch_image_response
 from app.services.image_processing import overlay_logo
 from typing_extensions import Annotated, Optional
 from app.core.logger import logger
 from app.models.item import Item
-import base64
+from app.services.s3 import upload_image_to_s3, BUCKET_NAME
 
 router = APIRouter()
 
 @router.post("/regenerate-image")
-async def regenerate_post(
+async def regenerate_image(
     post: str = Form(...),
     length: Annotated[int, Form(..., ge=10, le=700)] = 150,
     bzname: str = Form(...),
@@ -19,7 +20,7 @@ async def regenerate_post(
     website: str = Form(...),
     hashtags: bool = Form(...),
     color_theme: Optional[str] = Form(None),
-    logo: UploadFile = Form(...),
+    logo: UploadFile = File(...),
     count: int = Form(...),
     model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022",
 ):
@@ -49,16 +50,23 @@ async def regenerate_post(
         logo_bytes = await logo.read()
         final_image_bytes = overlay_logo(image, logo_bytes)
 
-        image_base64 = base64.b64encode(final_image_bytes).decode('utf-8')
+        
 
+
+        # Generate unique image name
+        image_name = f"gen_post_{uuid.uuid4().hex}.jpeg"
+        # Upload image to S3
+        upload_image_to_s3(final_image_bytes, image_name) 
+        # Generate S3 URL
+        s3_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{image_name}"
+        return {
+            "tagline": tagline,
+            "image": s3_url,   
+        }
         # Save the image to a file for testing
         # image_name = f"./overlayed_images/gen_post_{tagline}.jpeg"
         # with open(image_name, 'wb') as file:
         #     file.write(final_image_bytes)
-        return {
-            "tagline": tagline,
-            "image": image_base64,   
-        }
     except Exception as e:
         logger.error(f"Unhandled error: {e}")
         raise HTTPException(status_code=500, detail="Unable to regenerate image")
