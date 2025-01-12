@@ -5,8 +5,10 @@ def build_prompt_generation(item: Item) -> str:
     base_prompt = (
         f"Write a professional social media post, about {item.length} words long, "
         f"for the business {item.bzname}. The post should achieve the goal: {item.purpose}, "
-        f"and using a {item.preferredTone} tone. Use the website {item.website} naturally. "
+        f"and using a {item.preferredTone} tone. "
     )
+    if item.website and item.website != "":
+        base_prompt += f"Use the website {item.website} naturally. "
     if item.hashtags:
         return base_prompt + "Include relevant hashtags. Do not include any introductory or opening or ending or closing text."
     return base_prompt + "Do not include hashtags. Do not include any introductory or opening or ending or closing text."
@@ -96,9 +98,12 @@ def build_topics_gen_prompt(texts, no_of_topics):
     return full_text + "Do not include any introductory, opening, ending, or closing text; provide only the prompt needed for generating the advertisement image."
 
 def build_prompt_bulk_generation(item: Item) -> str:
-    return (
+    base_prompt = (
         f"Write a professional social media post, about {item.length} words long, "
         f"for the business {item.bzname}. The topic of post is: {item.purpose}, "
-        f"and using a {item.preferredTone} tone. Use the website {item.website} naturally. "
-        "Include relevant hashtags. Do not include any introductory or opening or ending or closing text."
+        f"and using a {item.preferredTone} tone. "
     )
+    
+    if item.website and item.website != "":
+        base_prompt += f"Use the website {item.website} naturally. "
+    return base_prompt + "Include relevant hashtags. Do not include any introductory or opening or ending or closing text."

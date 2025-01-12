@@ -18,7 +18,7 @@ async def generate_post(
     bzname: str = Form(...),
     purpose: str = Form(...),
     preferredTone: str = Form(...),
-    website: str = Form(...),
+    website: Optional[str] = "",
     hashtags: bool = Form(...),
     color_theme: Optional[str] = Form(None),
     logo: str = Form(...),
