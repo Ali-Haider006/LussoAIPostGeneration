@@ -6,7 +6,7 @@ from app.services.image_processing import overlay_logo, add_text_overlay, genera
 from typing_extensions import Annotated, Optional
 from app.utils.download_image_from_url import download_image_from_url
 from app.core.logger import logger
-from app.models.item import Item
+from app.models.regenerate_image import RegenerationImage
 from app.services.s3 import upload_image_to_s3, BUCKET_NAME
 
 router = APIRouter()
@@ -14,9 +14,7 @@ router = APIRouter()
 @router.post("/regenerate-image")
 async def regenerate_image(
     post: str = Form(...),
-    length: Annotated[int, Form(..., ge=10, le=700)] = 150,
     bzname: str = Form(...),
-    purpose: str = Form(...),
     preferredTone: str = Form(...),
     website: str = Form(...),
     hashtags: bool = Form(...),
@@ -27,10 +25,8 @@ async def regenerate_image(
 ):
     if count >= 2:
         raise HTTPException(status_code=403, detail="Cannot regenerate more than 2 times")
-    item = Item(
-        length=length,
-        bzname=bzname,
-        purpose=purpose,
+    item = RegenerationImage(
+        bzname=bzname,  
         preferredTone=preferredTone,
         website=website,
         hashtags=hashtags,
