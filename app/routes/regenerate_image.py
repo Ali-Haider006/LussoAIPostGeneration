@@ -16,7 +16,7 @@ async def regenerate_image(
     post: str = Form(...),
     bzname: str = Form(...),
     preferredTone: str = Form(...),
-    website: str = Form(...),
+    website: Optional[str] = "",
     hashtags: bool = Form(...),
     color_theme: Optional[str] = Form(None),
     logo: str = Form(...),

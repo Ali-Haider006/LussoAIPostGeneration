@@ -86,7 +86,7 @@ def build_dynamic_image_prompt(post_content: str, color_theme: str) -> str:
         "Do not include any introductory, opening, ending, or closing text; provide only the prompt needed for generating the advertisement image."
     )
 
-def build_topics_gen_prompt(texts, no_of_topics):
+def build_topics_gen_prompt_old(texts, no_of_topics):
     full_text = "Analyze the following content from the user's past posts:\n\n "
     n = 1
     for text in texts:
@@ -96,6 +96,54 @@ def build_topics_gen_prompt(texts, no_of_topics):
     full_text += "{\n'topics':[\n'Topics 1',\n 'Topics 2',\n 'Topics 3']}\n "
     full_text += "Ensure the topics are concise and relevant to the user's content style. "
     return full_text + "Do not include any introductory, opening, ending, or closing text; provide only the prompt needed for generating the advertisement image."
+
+
+def build_topics_gen_prompt(texts, no_of_topics):
+    if not texts:
+        return "Please provide at least one previous post for analysis."
+    
+    available_posts = len(texts)
+    
+    full_text = (
+        "You are a creative content creator. "
+        "Analyze these previous social media posts for style, tone, topics, and themes:\n\n"
+    )
+    
+    for idx, text in enumerate(texts, 1):
+        full_text += f"Post {idx}: {text.strip()}\n"
+    
+    full_text += f"\nBased on the above {available_posts} posts, "
+    
+    if available_posts < no_of_topics:
+        full_text += (
+            f"extrapolate and expand upon the identified themes and patterns. "
+            f"Although only {available_posts} posts were provided, generate {no_of_topics} unique topics "
+            f"by exploring related areas and maintaining consistent style. "
+        )
+    else:
+        full_text += f"generate {no_of_topics} unique topics "
+    
+    full_text += (
+        "that would appeal to the same people. "
+        "Each topic should be a clear, specific content idea, not a generic theme.\n\n"
+        "Format the response as a JSON object exactly as shown:\n"
+        "{\n"
+        "  'topics': [\n"
+        "    'Specific Topic 1',\n"
+        "    'Specific Topic 2',\n"
+        "    'Specific Topic 3'\n"
+        "  ]\n"
+        "}\n\n"
+        "Requirements:\n"
+        "- Each topic should be 5-15 words\n"
+        "- Topics should vary in focus while maintaining theme consistency\n"
+        "- Avoid generic or repetitive suggestions\n"
+        "- Match the writing style and tone of the original posts\n"
+        "Do not include any introductory, opening, ending, or closing text "
+        "Return only the JSON object without any additional text."
+    )
+    
+    return full_text
 
 def build_prompt_bulk_generation(item: Item) -> str:
     base_prompt = (

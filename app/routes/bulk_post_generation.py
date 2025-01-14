@@ -4,7 +4,6 @@ from app.services.prompt_building import build_prompt_bulk_generation, build_pro
 from app.services.api_calls import fetch_response, fetch_image_response
 from app.services.image_processing import overlay_logo, add_text_overlay, generate_random_hex_color
 from app.services.text_processing import find_all_texts
-from data import data
 from typing_extensions import Annotated, Optional
 from app.utils.download_image_from_url import download_image_from_url
 from app.core.logger import logger
@@ -25,6 +24,7 @@ async def bulk_generate_post(
     color_theme: Optional[str] = Form(None),
     number_of_posts: Annotated[int, Form(..., ge=1, le=30)] = 10,
     logo: str = Form(...),
+    posts: str = Form(...),
     model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
 ):
     item = Item(
@@ -38,7 +38,8 @@ async def bulk_generate_post(
         model=model
     )
 
-    posts_text = find_all_texts(data, number_of_posts)
+    posts = json.loads(posts)
+    posts_text = find_all_texts(posts, number_of_posts)
     prompt = build_topics_gen_prompt(posts_text, number_of_posts)
     logger.info(f"Generating topics with prompt: {prompt}")
     input_tokens, output_tokens = 0, 0
