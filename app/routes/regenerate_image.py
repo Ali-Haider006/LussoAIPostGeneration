@@ -1,9 +1,16 @@
-from fastapi import APIRouter, HTTPException, Form
+from fastapi import APIRouter, HTTPException, Form, status
+from typing_extensions import Annotated, Optional
+from typing import Dict, Any
 import uuid
+import traceback
+
 from app.services.prompt_building import build_prompt_tagline, build_dynamic_image_prompt
 from app.services.api_calls import fetch_response, fetch_image_response
-from app.services.image_processing import overlay_logo, add_text_overlay, generate_random_hex_color
-from typing_extensions import Annotated, Optional
+from app.services.image_processing import (
+    overlay_logo, 
+    add_text_overlay, 
+    generate_random_hex_color
+)
 from app.utils.download_image_from_url import download_image_from_url
 from app.core.logger import logger
 from app.models.regenerate_image import RegenerationImage
@@ -11,7 +18,38 @@ from app.services.s3 import upload_image_to_s3, BUCKET_NAME
 
 router = APIRouter()
 
-@router.post("/regenerate-image")
+def validate_inputs(
+    post: str,
+    bzname: str,
+    color_theme: Optional[str],
+    logo: str,
+    count: int
+) -> None:
+    """Validate input parameters before processing."""
+    if not post.strip():
+        raise ValueError("Post content cannot be empty")
+    
+    if not bzname.strip():
+        raise ValueError("Business name cannot be empty")
+    
+    if color_theme and "#" in color_theme:
+        # Validate hex color format if provided
+        colors = color_theme.split(",")
+        for color in colors:
+            color = color.strip()
+            if not color.startswith("#") or len(color) != 7:
+                raise ValueError(f"Invalid hex color format: {color}")
+    
+    if not logo.startswith(("http://", "https://")):
+        raise ValueError("Invalid logo URL format")
+    
+    if count < 0:
+        raise ValueError("Count cannot be negative")
+    
+    if count >= 2:
+        raise ValueError("Cannot regenerate more than 2 times")
+
+@router.post("/regenerate-image", response_model=Dict[str, str])
 async def regenerate_image(
     post: str = Form(...),
     bzname: str = Form(...),
@@ -22,52 +60,134 @@ async def regenerate_image(
     logo: str = Form(...),
     count: int = Form(...),
     model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022",
-):
-    if count >= 2:
-        raise HTTPException(status_code=403, detail="Cannot regenerate more than 2 times")
-    item = RegenerationImage(
-        bzname=bzname,  
-        preferredTone=preferredTone,
-        website=website,
-        hashtags=hashtags,
-        color_theme=color_theme if color_theme else "vibrant color theme",
-        model=model
-    )
+) -> Dict[str, str]:
+    """
+    Regenerate an image with text overlay and logo based on input parameters.
+    
+    Args:
+        post (str): Post content to base the image on
+        bzname (str): Business name
+        preferredTone (str): Preferred tone for the content
+        website (str, optional): Website URL
+        hashtags (bool): Whether to include hashtags
+        color_theme (str, optional): Color theme for the image
+        logo (str): URL of the logo to overlay
+        count (int): Number of regeneration attempts
+        model (str): AI model to use
+        
+    Returns:
+        Dict[str, str]: Dictionary containing tagline and image URL
+        
+    Raises:
+        HTTPException: Various exceptions based on the error type
+    """
+    request_id = str(uuid.uuid4())
+    logger.info("Starting image regeneration request", extra={
+        "request_id": request_id,
+        "business_name": bzname,
+        "regeneration_count": count
+    })
+    
     try:
+        # Validate inputs
+        validate_inputs(post, bzname, color_theme, logo, count)
+        
+        # Initialize regeneration item
+        item = RegenerationImage(
+            bzname=bzname,
+            preferredTone=preferredTone,
+            website=website,
+            hashtags=hashtags,
+            color_theme=color_theme if color_theme else "vibrant color theme",
+            model=model
+        )
+        
+        # Generate tagline
+        logger.debug("Generating tagline", extra={"request_id": request_id})
         tagline_prompt = build_prompt_tagline(item, post)
-        logger.info(f"Generating tagline with prompt: {tagline_prompt}")
-        tagline = fetch_response(tagline_prompt, "claude-3-5-sonnet-20241022").content[0].text
-        logger.info(f"Generated tagline: {tagline}")
-        image_model = "ultra"
+        tagline_response = fetch_response(tagline_prompt, "claude-3-5-sonnet-20241022")
+        if not tagline_response or not tagline_response.content:
+            raise ValueError("Failed to generate tagline")
+        tagline = tagline_response.content[0].text
+        
+        # Generate image prompt
+        logger.debug("Generating image prompt", extra={"request_id": request_id})
         image_prompt_dynamic = build_dynamic_image_prompt(post, item.color_theme)
-        image_prompt = fetch_response(image_prompt_dynamic, "claude-3-5-sonnet-20241022").content[0].text
-        logger.info(f"Generated image prompt: {image_prompt}")
-
-        image = fetch_image_response(image_prompt, image_model)
+        image_prompt_response = fetch_response(image_prompt_dynamic, "claude-3-5-sonnet-20241022")
+        if not image_prompt_response or not image_prompt_response.content:
+            raise ValueError("Failed to generate image prompt")
+        image_prompt = image_prompt_response.content[0].text
+        
+        # Generate and process image
+        logger.debug("Generating base image", extra={"request_id": request_id})
+        image = fetch_image_response(image_prompt, "ultra")
+        
+        # Determine color theme
         if not item.color_theme or item.color_theme == "vibrant color theme" or "#" not in item.color_theme:
             image_color_theme = generate_random_hex_color()
         else:
             image_color_theme = item.color_theme.split(",")[0].strip()
-
+        
+        # Add overlays
+        logger.debug("Adding text overlay", extra={"request_id": request_id})
         text_image = add_text_overlay(image, tagline, image_color_theme)
-
+        
+        logger.debug("Downloading and adding logo", extra={"request_id": request_id})
         logo_bytes = await download_image_from_url(logo)
         final_image_bytes = overlay_logo(text_image, logo_bytes)
-
-        # Generate unique image name
+        
+        # Upload to S3
         image_name = f"gen_post_{uuid.uuid4().hex}.jpeg"
-        # Upload image to S3
-        upload_image_to_s3(final_image_bytes, image_name) 
-        # Generate S3 URL
+        logger.debug("Uploading to S3", extra={
+            "request_id": request_id,
+            "image_name": image_name
+        })
+        upload_image_to_s3(final_image_bytes, image_name)
+        
         s3_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{image_name}"
+        
+        logger.info("Successfully generated image", extra={
+            "request_id": request_id,
+            "image_url": s3_url
+        })
+        
         return {
             "tagline": tagline,
-            "image_url": s3_url,   
+            "image_url": s3_url,
         }
-        # Save the image to a file for testing
-        # image_name = f"./overlayed_images/gen_post_{tagline}.jpeg"
-        # with open(image_name, 'wb') as file:
-        #     file.write(final_image_bytes)
+        
+    except ValueError as e:
+        error_msg = str(e)
+        logger.warning("Validation error", extra={
+            "request_id": request_id,
+            "error": error_msg
+        })
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=error_msg
+        )
+        
+    except TimeoutError:
+        error_msg = "Request timed out while processing"
+        logger.error(error_msg, extra={
+            "request_id": request_id
+        })
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail=error_msg
+        )
+    
     except Exception as e:
-        logger.error(f"Unhandled error: {e}")
-        raise HTTPException(status_code=500, detail="Unable to regenerate image")
+        error_msg = "An unexpected error occurred while regenerating the image"
+        logger.error(
+            error_msg,
+            extra={
+                "request_id": request_id,
+                "error": str(e),
+                "traceback": traceback.format_exc()
+            }
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=error_msg
+        )

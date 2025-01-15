@@ -7,8 +7,9 @@ from app.services.s3 import upload_image_to_s3, BUCKET_NAME
 from typing_extensions import Annotated, Optional
 from app.utils.download_image_from_url import download_image_from_url
 from app.core.logger import logger
-import uuid  # For generating unique image names
+import uuid
 from app.services.prompt_building import build_dynamic_image_prompt
+import traceback
 
 router = APIRouter()
 
@@ -78,8 +79,14 @@ async def generate_post(
             "input_tokens": post.usage.input_tokens,
             "output_tokens": post.usage.output_tokens,    
         }
+    
     except HTTPException as http_exc:
-        raise http_exc
+        logger.warning(f"HTTP exception: {http_exc.detail}")
+        raise
+    except ValueError as val_err:
+        logger.error(f"Value error encountered: {val_err}")
+        raise HTTPException(status_code=400, detail="Invalid input data")
     except Exception as e:
         logger.error(f"Unhandled error: {e}")
-        raise HTTPException(status_code=500, detail="Unable to generate post")
+        logger.debug(traceback.format_exc())
+        raise HTTPException(status_code=500, detail="An internal error occurred while generating posts.")
