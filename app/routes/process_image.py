@@ -3,6 +3,8 @@ from fastapi.responses import JSONResponse
 from typing import Dict, Any
 from urllib.parse import urlparse
 import traceback
+import io
+from PIL import Image
 
 from app.services.image_processing import remove_background, extract_color_proportions
 from app.utils.download_image_from_url import download_image_from_url
@@ -54,10 +56,11 @@ async def process_image(file: str = Form(...)) -> JSONResponse:
         image_bytes = await download_image_from_url(file)
         
         logger.debug("Removing background", extra={"request_id": request_id})
-        image_no_bg = remove_background(image_bytes)
+        output_image = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
+        # image_no_bg = remove_background(image_bytes)
         
         logger.debug("Extracting color proportions", extra={"request_id": request_id})
-        color_proportions = extract_color_proportions(image_no_bg)
+        color_proportions = extract_color_proportions(output_image)
         
         logger.info("Successfully processed image", extra={
             "request_id": request_id,
