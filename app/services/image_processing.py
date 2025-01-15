@@ -15,7 +15,7 @@ def remove_background(image_bytes: bytes) -> Image.Image:
         output_image = Image.open(io.BytesIO(output_bytes)).convert("RGBA")
         return output_image
     except Exception as e:
-        raise ValueError(f"Error in background removal: {e}")
+        raise ValueError(f"Error in background removal: {e}") 
 
 
 def extract_color_proportions(image: Image.Image):
