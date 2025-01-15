@@ -7,7 +7,7 @@ from app.routes import generate_post, process_image, regenerate_image, bulk_post
 
 app = FastAPI()
 
-origins = ["*"]
+origins = ["*"] 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
