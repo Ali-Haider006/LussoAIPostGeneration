@@ -1,5 +1,8 @@
-def find_all_texts(data, limit=None):
+import json
+
+def get_post_facebook(data, limit=None):
     """Recursively find all 'Text' fields in the dataset, with an optional limit on the number of results."""
+    data = json.loads(data)
     texts = []
 
     def recursive_search(data):
@@ -26,3 +29,15 @@ def find_all_texts(data, limit=None):
 
     recursive_search(data)
     return texts
+
+def get_posts_linkedIn(data, limit=None):
+    data_json = json.loads(data)
+    posts = data_json["payload"]["listOfPosts"]["response"]["data"]
+    return [ sub['comment'] for sub in posts ][:limit]
+
+def get_text_business(data):
+    data_json = json.loads(data)
+    return {
+        "category": data_json["category"],
+        "description": data_json["description"],
+    }
