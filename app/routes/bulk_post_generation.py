@@ -26,7 +26,7 @@ async def bulk_generate_post(
     logo: str = Form(...),
     businessDescription: str = Form(...),
     facebookPosts: str = Form(...),
-    lindedInPosts: str = Form(...),
+    linkedInPosts: str = Form(...),
     model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
 ):
     item = Item(
@@ -42,7 +42,7 @@ async def bulk_generate_post(
     
     business_text = get_text_business(businessDescription)
     posts_facebook = get_post_facebook(facebookPosts, number_of_posts)
-    posts_linkedIn = get_posts_linkedIn(lindedInPosts, number_of_posts)
+    posts_linkedIn = get_posts_linkedIn(linkedInPosts, number_of_posts)
 
     if len(posts_facebook) > len(posts_linkedIn):
         posts_text = posts_facebook
