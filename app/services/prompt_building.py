@@ -99,35 +99,40 @@ def build_topics_gen_prompt_old(texts, no_of_topics):
 
 
 def build_topics_gen_prompt(texts, business_text, no_of_topics):
-    if not texts:
-        return "Please provide at least one previous post for analysis."
-    
     available_posts = len(texts)
-    
+    businessCategory = business_text["category"]
+    businessDescription = business_text["description"]
     full_text = (
         "You are a highly skilled creative content strategist. "
         "Your goal is to generate unique, engaging, and specific content topics "
         "that align with the style, tone, and themes of the provided social media posts "
         "and resonate with the business objectives outlined in the description.\n\n"
+        "Business Category:\n"
+        f"{businessCategory}\n\n"
         "Business Description:\n"
-        f"{business_text}\n\n"
-        "Analyze these previous social media posts for style, tone, topics, and themes:\n\n"
+        f"{businessDescription}\n\n"
     )
-    
-    for idx, text in enumerate(texts, 1):
-        full_text += f"Post {idx}: {text.strip()}\n"
-    
-    full_text += f"\nBased on the above {available_posts} posts and the business description, "
-    
-    if available_posts < no_of_topics:
-        full_text += (
-            f"extrapolate and expand upon the identified themes and patterns. "
-            f"Although only {available_posts} posts were provided, generate {no_of_topics} unique topics "
-            f"by exploring related areas and maintaining consistency with the business objectives and style. "
-        )
+    if not texts or len(texts) <= 0:
+        full_text += "Analyze these previous social media posts for style, tone, topics, and themes:\n\n"
+        for idx, text in enumerate(texts, 1):
+            full_text += f"Post {idx}: {text.strip()}\n"
+        
+        full_text += f"\nBased on the above {available_posts} posts and the business description, "
+        
+        if available_posts < no_of_topics:
+            full_text += (
+                f"extrapolate and expand upon the identified themes and patterns. "
+                f"Although only {available_posts} posts were provided, generate {no_of_topics} unique topics "
+                f"by exploring related areas and maintaining consistency with the business objectives and style. "
+            )
+        else:
+            full_text += f"generate {no_of_topics} unique topics "
     else:
-        full_text += f"generate {no_of_topics} unique topics "
-    
+        full_text += (
+            f"by exploring related areas and maintaining consistency with the business objectives and style. "
+            f"\nBased on the above the business description, generate {no_of_topics} unique topics "
+        )
+
     full_text += (
         "that align with the business description and appeal to the target audience. "
         "Each topic should be a clear, specific content idea, not a generic theme.\n\n"

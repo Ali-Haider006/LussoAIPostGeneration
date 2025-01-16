@@ -26,8 +26,8 @@ async def bulk_generate_post(
     number_of_posts: Annotated[int, Form(..., ge=1, le=30)] = 10,
     logo: str = Form(...),
     businessDescription: str = Form(...),
-    facebookPosts: str = Form(...),
-    linkedInPosts: str = Form(...),
+    facebookPosts: Optional[str] = "",
+    linkedInPosts: Optional[str] = "",
     model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
 ):
     item = Item(
@@ -42,14 +42,18 @@ async def bulk_generate_post(
     )
     
     business_text = get_text_business(businessDescription)
-    posts_facebook = get_post_facebook(facebookPosts, number_of_posts)
-    posts_linkedIn = get_posts_linkedIn(linkedInPosts, number_of_posts)
-
-    if len(posts_facebook) > len(posts_linkedIn):
-        posts_text = posts_facebook
+    if facebookPosts and facebookPosts != "":
+        posts_facebook = get_post_facebook(facebookPosts, number_of_posts)
+    if linkedInPosts and linkedInPosts != "":
+        posts_linkedIn = get_posts_linkedIn(linkedInPosts, number_of_posts)
+    if (facebookPosts and facebookPosts != "") or (linkedInPosts and linkedInPosts != ""):
+        if len(posts_facebook) > len(posts_linkedIn):
+            posts_text = posts_facebook
+        else:
+            posts_text = posts_linkedIn
     else:
-        posts_text = posts_linkedIn
-    posts_text = posts_linkedIn
+        posts_text = []
+
     prompt = build_topics_gen_prompt(posts_text, business_text, number_of_posts)
     logger.info(f"Generating topics with prompt: {prompt}")
     input_tokens, output_tokens = 0, 0
