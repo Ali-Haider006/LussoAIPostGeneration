@@ -21,7 +21,7 @@ async def generate_post(
     preferredTone: str = Form(...),
     website: Optional[str] = "",
     hashtags: bool = Form(...),
-    color_theme: Optional[str] = Form(None),
+    style: str= Form(...),
     logo: str = Form(...),
     model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
 ):
@@ -32,7 +32,7 @@ async def generate_post(
         preferredTone=preferredTone,
         website=website,
         hashtags=hashtags,
-        color_theme=color_theme if color_theme else "vibrant color theme",
+        style=style if style else "digital",
         model=model
     )
     prompt = build_prompt_generation(item)
@@ -47,7 +47,7 @@ async def generate_post(
         logger.info(f"Generated tagline: {tagline}")
         
         image_model = "ultra"
-        image_prompt_dynamic = build_dynamic_image_prompt(post.content[0].text, item.color_theme)
+        image_prompt_dynamic = build_dynamic_image_prompt(post.content[0].text, item.style)
 
         image_prompt = fetch_response(image_prompt_dynamic, "claude-3-5-sonnet-20241022").content[0].text
 
@@ -55,12 +55,12 @@ async def generate_post(
 
         image = fetch_image_response(image_prompt, image_model)
 
-        if not item.color_theme or item.color_theme == "vibrant color theme" or "#" not in item.color_theme:
-            image_color_theme = generate_random_hex_color()
+        if not item.style or item.style == "vibrant color theme" or "#" not in item.style:
+            image_style = generate_random_hex_color()
         else:
-            image_color_theme = item.color_theme.split(",")[0].strip()
+            image_style = item.style.split(",")[0].strip()
 
-        text_image = add_text_overlay(image, tagline, image_color_theme)
+        text_image = add_text_overlay(image, tagline, image_style)
 
         logo_bytes = await download_image_from_url(logo)
         final_image_bytes = overlay_logo(text_image, logo_bytes)

@@ -8,7 +8,7 @@ class Item(BaseModel):
     preferredTone: str
     website: str
     hashtags: bool
-    color_theme: str
+    style: str
     model: Annotated[str, Field(min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
 
     @root_validator(pre=True)
