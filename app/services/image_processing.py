@@ -76,10 +76,11 @@ def wrap_text(draw, text, font, max_width):
 
 def add_text_overlay(image_path, text, bg_color):
     position = random.choice(["top-left", "center-left", "bottom-left"])
-
+    image = Image.open(io.BytesIO(image_path)).convert("RGBA")
+    bg_color = extract_color_proportions(image)[0]["colorCode"]
     bg_color = bg_color.lstrip('#')
     bg_color = tuple(int(bg_color[i:i+2], 16) for i in (0, 2, 4))
-    image = Image.open(io.BytesIO(image_path)).convert("RGBA")
+
     width, height = image.size
     
     bg_width = int(width * 0.7)
@@ -141,14 +142,12 @@ def add_text_overlay(image_path, text, bg_color):
     return output_buffer.read()
 
 def generate_random_hex_color():
-    red = random.randint(50, 200)
-    green = random.randint(50, 200)
-    blue = random.randint(50, 200)
-
-    base_color = (red, green, blue)
-    variation=0.6
-
-    brightened_color = tuple(int(base + (255 - base) * variation) for base in base_color)
-
-    hex_color = "#" + "".join(f"{value:02X}" for value in brightened_color)
+    dominant_channel = random.randint(200, 255)
+    medium_channel = random.randint(100, 200)
+    low_channel = random.randint(0, 100)
+    
+    channels = [dominant_channel, medium_channel, low_channel]
+    random.shuffle(channels)
+    
+    hex_color = "#" + "".join(f"{value:02X}" for value in channels)
     return hex_color

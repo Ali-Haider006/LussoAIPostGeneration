@@ -15,7 +15,7 @@ def build_prompt_generation(item: Item) -> str:
 
 def build_prompt_tagline(item: Item, post: str) -> str:
     base_prompt = (
-        f"Write a professional tagline for the post {post}, for the business {item.bzname}."
+        f"Write a professional tagline for the post {post}, for the business {item.bzname}, with the purpose {item.purpose}."
         f"The tagline should be concise, should complement the post content, and can include content from post. "
         f"Use a {item.preferredTone} tone. Do not include emojis. "
     )
@@ -71,12 +71,12 @@ def build_dynamic_image_prompt_prev(post_content: str, tagline: str, color_theme
         "Do not include any introductory or opening or ending or closing text; provide only the prompt needed for generating the advertisement image."
     )
 
-def build_dynamic_image_prompt(post_content: str, color_theme: str) -> str:
+def build_dynamic_image_prompt(post_content: str, style: str) -> str:
     return (
         f"Generate a prompt for a high-quality, visually appealing social media advertisement image. "
         f"Prompt engineer to perfection. Give the highest weight to the quality. "
         f"Focus on the content theme: '{post_content}' to ensure the image aligns with the overall message. "
-        f"Use the color theme: {color_theme} as the primary palette, ensuring the colors dominate the design while remaining harmonious and professional. "
+        f"Use the image style: {style} as the primary palette, ensuring the style dominate the design while remaining harmonious and professional. "
         "The image must be bold, bright, and well-lit, ensuring clear visibility. "
         "Also use colors names instead of hex code values. Specify the layout, composition, and visual elements to create a compelling advertisement image that effectively conveys the message. "
         "Prompt layout should specify the image prominently, followed by description, and then the theme or colors. "
@@ -99,35 +99,40 @@ def build_topics_gen_prompt_old(texts, no_of_topics):
 
 
 def build_topics_gen_prompt(texts, business_text, no_of_topics):
-    if not texts:
-        return "Please provide at least one previous post for analysis."
-    
     available_posts = len(texts)
-    
+    businessCategory = business_text["category"]
+    businessDescription = business_text["description"]
     full_text = (
         "You are a highly skilled creative content strategist. "
         "Your goal is to generate unique, engaging, and specific content topics "
         "that align with the style, tone, and themes of the provided social media posts "
         "and resonate with the business objectives outlined in the description.\n\n"
+        "Business Category:\n"
+        f"{businessCategory}\n\n"
         "Business Description:\n"
-        f"{business_text}\n\n"
-        "Analyze these previous social media posts for style, tone, topics, and themes:\n\n"
+        f"{businessDescription}\n\n"
     )
-    
-    for idx, text in enumerate(texts, 1):
-        full_text += f"Post {idx}: {text.strip()}\n"
-    
-    full_text += f"\nBased on the above {available_posts} posts and the business description, "
-    
-    if available_posts < no_of_topics:
-        full_text += (
-            f"extrapolate and expand upon the identified themes and patterns. "
-            f"Although only {available_posts} posts were provided, generate {no_of_topics} unique topics "
-            f"by exploring related areas and maintaining consistency with the business objectives and style. "
-        )
+    if not texts or len(texts) <= 0:
+        full_text += "Analyze these previous social media posts for style, tone, topics, and themes:\n\n"
+        for idx, text in enumerate(texts, 1):
+            full_text += f"Post {idx}: {text.strip()}\n"
+        
+        full_text += f"\nBased on the above {available_posts} posts and the business description, "
+        
+        if available_posts < no_of_topics:
+            full_text += (
+                f"extrapolate and expand upon the identified themes and patterns. "
+                f"Although only {available_posts} posts were provided, generate {no_of_topics} unique topics "
+                f"by exploring related areas and maintaining consistency with the business objectives and style. "
+            )
+        else:
+            full_text += f"generate {no_of_topics} unique topics "
     else:
-        full_text += f"generate {no_of_topics} unique topics "
-    
+        full_text += (
+            f"by exploring related areas and maintaining consistency with the business objectives and style. "
+            f"\nBased on the above the business description, generate {no_of_topics} unique topics "
+        )
+
     full_text += (
         "that align with the business description and appeal to the target audience. "
         "Each topic should be a clear, specific content idea, not a generic theme.\n\n"
