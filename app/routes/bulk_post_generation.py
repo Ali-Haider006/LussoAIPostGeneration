@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Form, UploadFile, File
+from fastapi import APIRouter, HTTPException, Form
 from app.models.item import Item
 from app.services.prompt_building import build_prompt_bulk_generation, build_prompt_tagline, build_topics_gen_prompt
 from app.services.api_calls import fetch_response, fetch_image_response
@@ -22,12 +22,12 @@ async def bulk_generate_post(
     preferredTone: str = Form(...),
     website: str = Form(...),
     hashtags: bool = Form(...),
-    color_theme: Optional[str] = Form(None),
+    style: str = Form(...),
     number_of_posts: Annotated[int, Form(..., ge=1, le=30)] = 10,
     logo: str = Form(...),
     businessDescription: str = Form(...),
-    facebookPosts: Optional[str] = "",
-    linkedInPosts: Optional[str] = "",
+    facebookPosts: Annotated[str, Form(...)] = "",
+    linkedInPosts: Annotated[str, Form(...)] = "",
     model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
 ):
     item = Item(
@@ -37,11 +37,13 @@ async def bulk_generate_post(
         preferredTone=preferredTone,
         website=website,
         hashtags=hashtags,
-        color_theme=color_theme if color_theme else "vibrant color theme",
+        style=style if style else "digital",
         model=model
     )
     
     business_text = get_text_business(businessDescription)
+    posts_linkedIn = []
+    posts_facebook = []
     if facebookPosts and facebookPosts != "":
         posts_facebook = get_post_facebook(facebookPosts, number_of_posts)
     if linkedInPosts and linkedInPosts != "":
@@ -81,7 +83,7 @@ async def bulk_generate_post(
                 logger.info(f"Generated tagline: {tagline}")
 
                 image_model = "ultra"
-                image_prompt_dynamic = build_dynamic_image_prompt(post_res.content[0].text, item.color_theme)
+                image_prompt_dynamic = build_dynamic_image_prompt(post_res.content[0].text, item.style)
 
                 image_prompt = fetch_response(image_prompt_dynamic, "claude-3-5-sonnet-20241022").content[0].text
 
@@ -89,10 +91,11 @@ async def bulk_generate_post(
 
                 image = fetch_image_response(image_prompt, image_model)
 
-                if not item.color_theme or item.color_theme == "vibrant color theme" or "#" not in item.color_theme:
-                    image_color_theme = generate_random_hex_color()
-                else:
-                    image_color_theme = item.color_theme.split(",")[0].strip()
+                # if not item.color_theme or item.color_theme == "vibrant color theme" or "#" not in item.color_theme:
+                #     image_color_theme = generate_random_hex_color()
+                # else:
+                #     image_color_theme = item.color_theme.split(",")[0].strip()
+                image_color_theme = "test"
 
                 text_image = add_text_overlay(image, tagline, image_color_theme)
 
