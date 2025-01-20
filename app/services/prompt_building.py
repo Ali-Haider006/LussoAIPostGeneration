@@ -15,7 +15,7 @@ def build_prompt_generation(item: Item) -> str:
 
 def build_prompt_tagline(item: Item, post: str) -> str:
     base_prompt = (
-        f"Write a professional tagline for the post {post}, for the business {item.bzname}."
+        f"Write a professional tagline for the post {post}, for the business {item.bzname}, with the purpose {item.purpose}."
         f"The tagline should be concise, should complement the post content, and can include content from post. "
         f"Use a {item.preferredTone} tone. Do not include emojis. "
     )
@@ -71,12 +71,12 @@ def build_dynamic_image_prompt_prev(post_content: str, tagline: str, color_theme
         "Do not include any introductory or opening or ending or closing text; provide only the prompt needed for generating the advertisement image."
     )
 
-def build_dynamic_image_prompt(post_content: str, color_theme: str) -> str:
+def build_dynamic_image_prompt(post_content: str, style: str) -> str:
     return (
         f"Generate a prompt for a high-quality, visually appealing social media advertisement image. "
         f"Prompt engineer to perfection. Give the highest weight to the quality. "
         f"Focus on the content theme: '{post_content}' to ensure the image aligns with the overall message. "
-        f"Use the color theme: {color_theme} as the primary palette, ensuring the colors dominate the design while remaining harmonious and professional. "
+        f"Use the image style: {style} as the primary palette, ensuring the style dominate the design while remaining harmonious and professional. "
         "The image must be bold, bright, and well-lit, ensuring clear visibility. "
         "Also use colors names instead of hex code values. Specify the layout, composition, and visual elements to create a compelling advertisement image that effectively conveys the message. "
         "Prompt layout should specify the image prominently, followed by description, and then the theme or colors. "

@@ -21,7 +21,7 @@ router = APIRouter()
 def validate_inputs(
     post: str,
     bzname: str,
-    color_theme: Optional[str],
+    style: Optional[str],
     logo: str,
     count: int
 ) -> None:
@@ -32,9 +32,9 @@ def validate_inputs(
     if not bzname.strip():
         raise ValueError("Business name cannot be empty")
     
-    if color_theme and "#" in color_theme:
+    if style and "#" in style:
         # Validate hex color format if provided
-        colors = color_theme.split(",")
+        colors = style.split(",")
         for color in colors:
             color = color.strip()
             if not color.startswith("#") or len(color) != 7:
@@ -51,12 +51,13 @@ def validate_inputs(
 
 @router.post("/regenerate-image", response_model=Dict[str, str])
 async def regenerate_image(
+    purpose: str = Form(...),
     post: str = Form(...),
     bzname: str = Form(...),
     preferredTone: str = Form(...),
     website: Optional[str] = "",
     hashtags: bool = Form(...),
-    color_theme: Optional[str] = Form(None),
+    style: str = Form(...),
     logo: str = Form(...),
     count: int = Form(...),
     model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022",
@@ -70,7 +71,7 @@ async def regenerate_image(
         preferredTone (str): Preferred tone for the content
         website (str, optional): Website URL
         hashtags (bool): Whether to include hashtags
-        color_theme (str, optional): Color theme for the image
+        style (str, optional): Color theme for the image
         logo (str): URL of the logo to overlay
         count (int): Number of regeneration attempts
         model (str): AI model to use
@@ -90,15 +91,16 @@ async def regenerate_image(
     
     try:
         # Validate inputs
-        validate_inputs(post, bzname, color_theme, logo, count)
+        validate_inputs(post, bzname, style, logo, count)
         
         # Initialize regeneration item
         item = RegenerationImage(
+            purpose=purpose,
             bzname=bzname,
             preferredTone=preferredTone,
             website=website,
             hashtags=hashtags,
-            color_theme=color_theme if color_theme else "vibrant color theme",
+            style=style if style else "digital",
             model=model
         )
         
@@ -112,7 +114,7 @@ async def regenerate_image(
         
         # Generate image prompt
         logger.debug("Generating image prompt", extra={"request_id": request_id})
-        image_prompt_dynamic = build_dynamic_image_prompt(post, item.color_theme)
+        image_prompt_dynamic = build_dynamic_image_prompt(post, item.style)
         image_prompt_response = fetch_response(image_prompt_dynamic, "claude-3-5-sonnet-20241022")
         if not image_prompt_response or not image_prompt_response.content:
             raise ValueError("Failed to generate image prompt")
@@ -123,14 +125,14 @@ async def regenerate_image(
         image = fetch_image_response(image_prompt, "ultra")
         
         # Determine color theme
-        if not item.color_theme or item.color_theme == "vibrant color theme" or "#" not in item.color_theme:
-            image_color_theme = generate_random_hex_color()
+        if not item.style or item.style == "digital" or "#" not in item.style:
+            image_style = generate_random_hex_color()
         else:
-            image_color_theme = item.color_theme.split(",")[0].strip()
+            image_style = item.style.split(",")[0].strip()
         
         # Add overlays
         logger.debug("Adding text overlay", extra={"request_id": request_id})
-        text_image = add_text_overlay(image, tagline, image_color_theme)
+        text_image = add_text_overlay(image, tagline, image_style)
         
         logger.debug("Downloading and adding logo", extra={"request_id": request_id})
         logo_bytes = await download_image_from_url(logo)
