@@ -56,11 +56,11 @@ async def process_image(file: str = Form(...)) -> JSONResponse:
         image_bytes = await download_image_from_url(file)
         
         logger.debug("Removing background", extra={"request_id": request_id})
-        output_image = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
-        # image_no_bg = remove_background(image_bytes)
+        #output_image = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
+        image_no_bg = remove_background(image_bytes)
         
         logger.debug("Extracting color proportions", extra={"request_id": request_id})
-        color_proportions = extract_color_proportions(output_image)
+        color_proportions = extract_color_proportions(image_no_bg)
         
         logger.info("Successfully processed image", extra={
             "request_id": request_id,
