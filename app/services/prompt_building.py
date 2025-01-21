@@ -21,6 +21,15 @@ def build_prompt_tagline(item: Item, post: str) -> str:
     )
     return base_prompt + "Do not include any introductory or opening or ending or closing text."
 
+def build_prompt_tagline_no_purpose(item: Item, post: str) -> str:
+    base_prompt = (
+        f"Write a professional tagline for the post {post}, for the business {item.bzname}. "
+        f"The tagline should be concise, should complement the post content, and can include content from post. "
+        f"Use a {item.preferredTone} tone. Do not include emojis. "
+    )
+    return base_prompt + "Do not include any introductory or opening or ending or closing text."
+
+
 def build_prompt_regeneration(item: RegenerationItem) -> str:
     base_prompt = (
         f"Rewrite and improve the social media post, "
@@ -38,7 +47,6 @@ def build_image_prompt(item: Item, tagline: str) -> str:
     refined_prompt = (
         f"Create a high-quality, professional social media advertisement poster for the following product: "
         f"Brand Name: '{item.bzname}' and Product Description: '{tagline}'. "
-        f"The design should use the exact color palette: {item.color_theme}. "
         f"Strictly include only the following text in the image: '{item.bzname}' and '{tagline}'. "
         "No extra text, watermarks, or unrelated elements should appear in the image. "
         "Focus on a clean, minimalistic design with a professional, modern aesthetic. "
@@ -85,6 +93,22 @@ def build_dynamic_image_prompt(post_content: str, style: str) -> str:
         "Please keep the generated prompt concise, clear, and as short as possible, with a maximum of 25 to 30 words. Avoid heavy details in the generated prompt. "
         "Do not include any introductory, opening, ending, or closing text; provide only the prompt needed for generating the advertisement image."
     )
+
+def build_dynamic_image_prompt_purpose(post_content: str, style: str, purpose: str) -> str:
+    return (
+        f"Generate a prompt for a high-quality, visually appealing social media advertisement image. "
+        f"Prompt engineer to perfection. Give the highest weight to the quality and user suggestions: '{purpose}'. "
+        f"Focus on the content theme: '{post_content}' to ensure the image aligns with the overall message. "
+        f"Use the image style: {style} as the primary palette, ensuring the style dominates the design while remaining harmonious and professional. "
+        "The image must be bold, bright, and well-lit, ensuring clear visibility. "
+        "Also use color names instead of hex code values. Specify the layout, composition, and visual elements to create a compelling advertisement image that effectively conveys the message. "
+        "Prompt layout should specify the image prominently, followed by description, and then the theme or colors. "
+        "Describe specific visual elements and composition, emphasizing balance, modern aesthetics, and alignment with the provided text and purpose. "
+        "Use techniques like quality boosters, weighted terms, style modifiers, and other prompt engineering techniques. "
+        "Please keep the generated prompt concise, clear, and as short as possible, with a maximum of 25 to 30 words. Avoid heavy details in the generated prompt. "
+        "Do not include any introductory, opening, ending, or closing text; provide only the prompt needed for generating the advertisement image."
+    )
+
 
 def build_topics_gen_prompt_old(texts, no_of_topics):
     full_text = "Analyze the following content from the user's past posts:\n\n "
