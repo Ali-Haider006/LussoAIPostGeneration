@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Form
 from app.models.item import Item
-from app.services.prompt_building import build_prompt_bulk_generation, build_prompt_tagline, build_topics_gen_prompt
+from app.services.prompt_building import build_prompt_bulk_generation, build_prompt_tagline_no_purpose, build_topics_gen_prompt
 from app.services.api_calls import fetch_response, fetch_image_response
 from app.services.image_processing import overlay_logo, add_text_overlay, generate_random_hex_color
 from app.services.text_processing import get_post_facebook, get_posts_linkedIn, get_text_business
@@ -20,7 +20,7 @@ async def bulk_generate_post(
     length: Annotated[int, Form(..., ge=10, le=700)] = 150,
     bzname: str = Form(...),
     preferredTone: str = Form(...),
-    website: str = Form(...),
+    website: Annotated[str, Form(...)] = "",
     hashtags: bool = Form(...),
     style: str = Form(...),
     number_of_posts: Annotated[int, Form(..., ge=1, le=30)] = 10,
@@ -76,7 +76,7 @@ async def bulk_generate_post(
                 input_tokens += post_res.usage.input_tokens
                 output_tokens += post_res.usage.output_tokens
 
-                tagline_prompt = build_prompt_tagline(item, post_res.content[0].text)
+                tagline_prompt = build_prompt_tagline_no_purpose(item, post_res.content[0].text)
                 logger.info(f"Generating tagline with prompt: {tagline_prompt}")
                 
                 tagline = fetch_response(tagline_prompt, "claude-3-5-sonnet-20241022").content[0].text

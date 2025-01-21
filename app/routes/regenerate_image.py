@@ -4,7 +4,7 @@ from typing import Dict, Any
 import uuid
 import traceback
 
-from app.services.prompt_building import build_prompt_tagline, build_dynamic_image_prompt
+from app.services.prompt_building import build_prompt_tagline_no_purpose, build_dynamic_image_prompt_purpose
 from app.services.api_calls import fetch_response, fetch_image_response
 from app.services.image_processing import (
     overlay_logo, 
@@ -55,7 +55,7 @@ async def regenerate_image(
     post: str = Form(...),
     bzname: str = Form(...),
     preferredTone: str = Form(...),
-    website: Optional[str] = "",
+    website: Annotated[str, Form(...)] = "",
     hashtags: bool = Form(...),
     style: str = Form(...),
     logo: str = Form(...),
@@ -106,7 +106,7 @@ async def regenerate_image(
         
         # Generate tagline
         logger.debug("Generating tagline", extra={"request_id": request_id})
-        tagline_prompt = build_prompt_tagline(item, post)
+        tagline_prompt = build_prompt_tagline_no_purpose(item, post)
         tagline_response = fetch_response(tagline_prompt, "claude-3-5-sonnet-20241022")
         if not tagline_response or not tagline_response.content:
             raise ValueError("Failed to generate tagline")
@@ -114,7 +114,7 @@ async def regenerate_image(
         
         # Generate image prompt
         logger.debug("Generating image prompt", extra={"request_id": request_id})
-        image_prompt_dynamic = build_dynamic_image_prompt(post, item.style)
+        image_prompt_dynamic = build_dynamic_image_prompt_purpose(post, item.style, item.purpose)
         image_prompt_response = fetch_response(image_prompt_dynamic, "claude-3-5-sonnet-20241022")
         if not image_prompt_response or not image_prompt_response.content:
             raise ValueError("Failed to generate image prompt")
