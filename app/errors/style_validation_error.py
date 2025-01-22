@@ -10,10 +10,13 @@ class StyleRequest(BaseModel):
 
     @validator('style')
     def validate_style(cls, v):
-        if not v or v.strip() == "":
-            raise StyleValidationError("Style parameter cannot be empty")
-            
-        if len(v) > 300:
-            raise StyleValidationError("Custom style description too long")
-            
-        return v.strip()
+        try:
+            if not v or v.strip() == "":
+                raise StyleValidationError("Style parameter cannot be empty")
+                
+            if len(v) > 300:
+                raise StyleValidationError("Custom style description too long")
+                
+            return v.strip()
+        except Exception as e:
+            raise StyleValidationError(f"Style validation failed: {str(e)}")
