@@ -1,4 +1,7 @@
-from fastapi import APIRouter, HTTPException, Form, UploadFile, File
+from fastapi import APIRouter, HTTPException, Form
+import io
+from PIL import Image
+from app.services.image_processing import extract_color_proportions
 from app.models.item import Item
 from app.services.prompt_building import build_prompt_generation, build_prompt_tagline
 from app.services.api_calls import fetch_response, fetch_image_response
@@ -40,9 +43,16 @@ async def generate_post(
             style=validated_style if validated_style else "digital",
             model=model
         )
-        prompt = build_prompt_generation(item)
-        logger.info(f"Generating post with prompt: {prompt}")
         try:
+            logo_bytes = await download_image_from_url(logo)
+            output_image = Image.open(io.BytesIO(logo_bytes)).convert("RGBA")
+
+            color_proportions = extract_color_proportions(output_image)
+            colors = ", ".join([ sub['colorCode'] for sub in color_proportions ])
+
+            prompt = build_prompt_generation(item)
+            logger.info(f"Generating post with prompt: {prompt}")
+
             post = fetch_response(prompt, item.model)
 
             tagline_prompt = build_prompt_tagline(item, post.content[0].text)
@@ -52,7 +62,7 @@ async def generate_post(
             logger.info(f"Generated tagline: {tagline}")
             
             image_model = "ultra"
-            image_prompt_dynamic = build_dynamic_image_prompt(post.content[0].text, item.style)
+            image_prompt_dynamic = build_dynamic_image_prompt(post.content[0].text, item.style, colors)
 
             image_prompt = fetch_response(image_prompt_dynamic, "claude-3-5-sonnet-20241022").content[0].text
 
@@ -67,7 +77,6 @@ async def generate_post(
 
             text_image = add_text_overlay(image, tagline, image_style)
 
-            logo_bytes = await download_image_from_url(logo)
             final_image_bytes = overlay_logo(text_image, logo_bytes)
 
             # Generate unique image name
