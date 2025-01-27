@@ -79,29 +79,27 @@ def build_dynamic_image_prompt_prev(post_content: str, tagline: str, color_theme
         "Do not include any introductory or opening or ending or closing text; provide only the prompt needed for generating the advertisement image."
     )
 
-def build_dynamic_image_prompt(post_content: str, style: str, colors: str) -> str:
+def build_dynamic_image_prompt(post_content: str, style: str) -> str:
     return (
         f"Generate a prompt for a high-quality, visually appealing social media advertisement image. "
         f"Prompt engineer to perfection. Give the highest weight to the quality. "
         f"Focus on the content theme: '{post_content}' to ensure the image aligns with the overall message. "
-        f"Use the image style: {style} as the primary palette, ensuring the style dominates the design while remaining harmonious and professional. "
-        f"Incorporate these colors with emphasis and weighted importance: {colors}::2, ensuring they influence the mood and aesthetics. "
+        f"Use the image style: {style} as the primary palette, ensuring the style dominate the design while remaining harmonious and professional. "
         "The image must be bold, bright, and well-lit, ensuring clear visibility. "
-        "Specify the layout, composition, and visual elements to create a compelling advertisement image that effectively conveys the message. "
+        "Also use colors names instead of hex code values. Specify the layout, composition, and visual elements to create a compelling advertisement image that effectively conveys the message. "
         "Prompt layout should specify the image prominently, followed by description, and then the theme or colors. "
         "Describe specific visual elements and composition, emphasizing balance, modern aesthetics, and alignment with the provided text. "
-        "Use techniques like quality boosters, weighted terms, style modifiers, and other prompt engineering techniques to ensure optimal output. "
+        "Use techniques like quality boosters, weighted terms, style modifiers, and other prompt engineering techniques. "
         "Please keep the generated prompt concise, clear, and as short as possible, with a maximum of 25 to 30 words. Avoid heavy details in the generated prompt. "
         "Do not include any introductory, opening, ending, or closing text; provide only the prompt needed for generating the advertisement image."
     )
 
-def build_dynamic_image_prompt_purpose(post_content: str, style: str, purpose: str, colors: str) -> str:
+def build_dynamic_image_prompt_purpose(post_content: str, style: str, purpose: str) -> str:
     return (
         f"Generate a prompt for a high-quality, visually appealing social media advertisement image. "
         f"Prompt engineer to perfection. Give the highest weight to the quality and user suggestions: '{purpose}'. "
         f"Focus on the content theme: '{post_content}' to ensure the image aligns with the overall message. "
         f"Use the image style: {style} as the primary palette, ensuring the style dominates the design while remaining harmonious and professional. "
-        f"Incorporate these colors with emphasis and weighted importance: {colors}::2, ensuring they influence the mood and aesthetics. "
         "The image must be bold, bright, and well-lit, ensuring clear visibility. "
         "Also use color names instead of hex code values. Specify the layout, composition, and visual elements to create a compelling advertisement image that effectively conveys the message. "
         "Prompt layout should specify the image prominently, followed by description, and then the theme or colors. "

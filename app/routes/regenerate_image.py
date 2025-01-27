@@ -3,9 +3,7 @@ from typing_extensions import Annotated, Optional
 from typing import Dict, Any
 import uuid
 import traceback
-import io
-from PIL import Image
-from app.services.image_processing import extract_color_proportions
+
 from app.services.prompt_building import build_prompt_tagline_no_purpose, build_dynamic_image_prompt_purpose
 from app.services.api_calls import fetch_response, fetch_image_response
 from app.services.image_processing import (
@@ -113,16 +111,10 @@ async def regenerate_image(
         if not tagline_response or not tagline_response.content:
             raise ValueError("Failed to generate tagline")
         tagline = tagline_response.content[0].text
-
-        logo_bytes = await download_image_from_url(logo)
-        output_image = Image.open(io.BytesIO(logo_bytes)).convert("RGBA")
-
-        color_proportions = extract_color_proportions(output_image)
-        colors = ", ".join([ sub['colorCode'] for sub in color_proportions ])
         
         # Generate image prompt
         logger.debug("Generating image prompt", extra={"request_id": request_id})
-        image_prompt_dynamic = build_dynamic_image_prompt_purpose(post, item.style, item.purpose, colors)
+        image_prompt_dynamic = build_dynamic_image_prompt_purpose(post, item.style, item.purpose)
         image_prompt_response = fetch_response(image_prompt_dynamic, "claude-3-5-sonnet-20241022")
         if not image_prompt_response or not image_prompt_response.content:
             raise ValueError("Failed to generate image prompt")
@@ -143,6 +135,7 @@ async def regenerate_image(
         text_image = add_text_overlay(image, tagline, image_style)
         
         logger.debug("Downloading and adding logo", extra={"request_id": request_id})
+        logo_bytes = await download_image_from_url(logo)
         final_image_bytes = overlay_logo(text_image, logo_bytes)
         
         # Upload to S3

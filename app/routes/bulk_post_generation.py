@@ -1,8 +1,5 @@
 from fastapi import APIRouter, HTTPException, Form
 from app.models.item import Item
-import io
-from PIL import Image
-from app.services.image_processing import extract_color_proportions
 from app.services.prompt_building import build_prompt_bulk_generation, build_prompt_tagline_no_purpose, build_topics_gen_prompt
 from app.services.api_calls import fetch_response, fetch_image_response
 from app.services.image_processing import overlay_logo, add_text_overlay, generate_random_hex_color
@@ -69,10 +66,6 @@ async def bulk_generate_post(
         topics = json.loads(topics_res.content[0].text)
         posts = []
         logo_bytes = await download_image_from_url(logo)
-        output_image = Image.open(io.BytesIO(logo_bytes)).convert("RGBA")
-
-        color_proportions = extract_color_proportions(output_image)
-        colors = ", ".join([ sub['colorCode'] for sub in color_proportions ])
 
         for topic in topics["topics"]:
             try:
@@ -90,7 +83,7 @@ async def bulk_generate_post(
                 logger.info(f"Generated tagline: {tagline}")
 
                 image_model = "ultra"
-                image_prompt_dynamic = build_dynamic_image_prompt(post_res.content[0].text, item.style, colors)
+                image_prompt_dynamic = build_dynamic_image_prompt(post_res.content[0].text, item.style)
 
                 image_prompt = fetch_response(image_prompt_dynamic, "claude-3-5-sonnet-20241022").content[0].text
 
