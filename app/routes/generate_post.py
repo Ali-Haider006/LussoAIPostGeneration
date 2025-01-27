@@ -25,7 +25,7 @@ async def generate_post(
     preferredTone: str = Form(...),
     website: Annotated[str, Form(...)] = "",
     hashtags: bool = Form(...),
-    style: str= Form(...),
+    style: str = Form(...),
     logo: str = Form(...),
     model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
 ):
@@ -48,7 +48,7 @@ async def generate_post(
             output_image = Image.open(io.BytesIO(logo_bytes)).convert("RGBA")
 
             color_proportions = extract_color_proportions(output_image)
-            colors = ", ".join([ sub['colorCode'] for sub in color_proportions ])
+            colors = ", ".join([sub['colorCode'] for sub in color_proportions])
 
             prompt = build_prompt_generation(item)
             logger.info(f"Generating post with prompt: {prompt}")
@@ -60,7 +60,20 @@ async def generate_post(
             
             tagline = fetch_response(tagline_prompt, "claude-3-5-sonnet-20241022").content[0].text
             logger.info(f"Generated tagline: {tagline}")
-            
+
+            # Check if tagline violates policy
+            if tagline.strip() == "AI generated content doesn't work for explicit policy. Goes against our policies.":
+                logger.info("Policy violation detected. Using prebuilt image.")
+                prebuilt_image_url = f"https://lussoimagestorage.s3.amazonaws.com/gen_post_0d8e8aed4e924711bfdcc9350f2f72e4.jpeg"
+                return {
+                    "post": post.content[0].text,
+                    "tagline": tagline,
+                    "image_url": prebuilt_image_url,  # Use prebuilt image URL
+                    "input_tokens": post.usage.input_tokens,
+                    "output_tokens": post.usage.output_tokens,
+                }
+
+            # Generate dynamic image if no policy violation
             image_model = "ultra"
             image_prompt_dynamic = build_dynamic_image_prompt(post.content[0].text, item.style, colors)
 
@@ -82,18 +95,18 @@ async def generate_post(
             # Generate unique image name
             image_name = f"gen_post_{uuid.uuid4().hex}.jpeg"
             # Upload image to S3
-            upload_image_to_s3(final_image_bytes, image_name) 
+            upload_image_to_s3(final_image_bytes, image_name)
             # Generate S3 URL
             s3_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{image_name}"
 
             return {
-                "post": post.content[0].text, 
+                "post": post.content[0].text,
                 "tagline": tagline,
                 "image_url": s3_url,  # Return the S3 URL instead of Base64
                 "input_tokens": post.usage.input_tokens,
-                "output_tokens": post.usage.output_tokens,    
+                "output_tokens": post.usage.output_tokens,
             }
-        
+
         except HTTPException as http_exc:
             logger.warning(f"HTTP exception: {http_exc.detail}")
             raise
@@ -104,7 +117,7 @@ async def generate_post(
             logger.error(f"Unhandled error: {e}")
             logger.debug(traceback.format_exc())
             raise HTTPException(status_code=500, detail="An internal error occurred while generating posts.")
-    
+
     except StyleValidationError as e:
         logger.error(f"Style validation error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
