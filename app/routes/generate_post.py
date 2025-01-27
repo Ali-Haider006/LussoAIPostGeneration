@@ -82,7 +82,7 @@ async def generate_post(
             # Generate unique image name
             image_name = f"gen_post_{uuid.uuid4().hex}.jpeg"
             # Upload image to S3
-            upload_image_to_s3(final_image_bytes, image_name) 
+            await upload_image_to_s3(final_image_bytes, image_name) 
             # Generate S3 URL
             s3_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{image_name}"
 
