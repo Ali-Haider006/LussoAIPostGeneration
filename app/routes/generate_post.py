@@ -13,6 +13,7 @@ from app.core.logger import logger
 import uuid
 from app.services.prompt_building import build_dynamic_image_prompt
 from app.errors.style_validation_error import StyleValidationError, StyleRequest
+from app.services.content_moderation import is_content_explicit
 from app.utils.constants import FONT_LIST
 from app.services.prompt_building import build_prompt_font_selection
 from app.utils.validate_font import get_valid_font
@@ -28,14 +29,24 @@ async def generate_post(
     preferredTone: str = Form(...),
     website: Annotated[str, Form(...)] = "",
     hashtags: bool = Form(...),
-    style: str= Form(...),
+    style: str = Form(...),
     logo: str = Form(...),
     model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
 ):
+    # Explicit content check 
+    if await is_content_explicit(purpose):
+        logger.error("Explicit content detected in purpose: ")
+        raise HTTPException(
+            status_code=400,
+            detail="Explicit content detected in the purpose. It is against the policy."
+        )
+
     try:
+        # Style validation
         style_request = StyleRequest(style=style)
         validated_style = style_request.style
 
+        # Create item object
         item = Item(
             length=length,
             bzname=bzname,
@@ -43,28 +54,30 @@ async def generate_post(
             preferredTone=preferredTone,
             website=website,
             hashtags=hashtags,
-            style=validated_style if validated_style else "digital",
+            style=validated_style or "digital",
             model=model
         )
+
+        # Main processing logic
         try:
+            # Process logo image
             logo_bytes = await download_image_from_url(logo)
             output_image = Image.open(io.BytesIO(logo_bytes)).convert("RGBA")
-
             color_proportions = extract_color_proportions(output_image)
-            colors = ", ".join([ sub['colorCode'] for sub in color_proportions ])
+            colors = ", ".join([sub['colorCode'] for sub in color_proportions])
 
+            # Generate post content
             prompt = build_prompt_generation(item)
             logger.info(f"Generating post with prompt: {prompt}")
-
             post = fetch_response(prompt, item.model)
 
+            # Generate tagline
             tagline_prompt = build_prompt_tagline(item, post.content[0].text)
             logger.info(f"Generating tagline with prompt: {tagline_prompt}")
-            
             tagline = fetch_response(tagline_prompt, "claude-3-5-sonnet-20241022").content[0].text
             logger.info(f"Generated tagline: {tagline}")
-            
-            image_model = "ultra"
+
+            # Generate and process image
             image_prompt_dynamic = build_dynamic_image_prompt(post.content[0].text, item.style, colors)
 
             image_prompt = fetch_response(image_prompt_dynamic, "claude-3-5-sonnet-20241022").content[0].text
@@ -77,51 +90,42 @@ async def generate_post(
                 image_style = generate_random_hex_color()
             else:
                 image_style = item.style.split(",")[0].strip()
-            
-            font_prompt = build_prompt_font_selection(item, tagline, FONT_LIST)
 
-            logger.info(f"Generated font prompt: {font_prompt}")
-
-            model_font = fetch_response(font_prompt, item.model)
-
-            font = get_valid_font(model_font.content[0].text, FONT_LIST)
-
-            logger.info(f"Generated font: {font}")
-
-            text_image = add_text_overlay(image, tagline, image_style, font)
+            text_image = add_text_overlay(image, tagline, image_style)
 
             final_image_bytes = overlay_logo(text_image, logo_bytes)
 
-            # Generate unique image name
+            # Upload to S3
             image_name = f"gen_post_{uuid.uuid4().hex}.jpeg"
-            # Upload image to S3
-            upload_image_to_s3(final_image_bytes, image_name) 
-            # Generate S3 URL
+            upload_image_to_s3(final_image_bytes, image_name)
             s3_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{image_name}"
 
             return {
-                "post": post.content[0].text, 
+                "post": post.content[0].text,
                 "tagline": tagline,
-                "image_url": s3_url,  # Return the S3 URL instead of Base64
+                "image_url": s3_url,
                 "input_tokens": post.usage.input_tokens,
-                "output_tokens": post.usage.output_tokens,    
+                "output_tokens": post.usage.output_tokens,
             }
         
         except HTTPException as http_exc:
             logger.warning(f"HTTP exception: {http_exc.detail}")
-            raise HTTPException(status_code=400, detail="HTTP exception")
+            raise
         except ValueError as val_err:
             logger.error(f"Value error encountered: {val_err}")
             raise HTTPException(status_code=400, detail="Invalid input data")
         except Exception as e:
-            logger.error(f"Unhandled error: {e}")
+            logger.error(f"Processing error: {str(e)}")
             logger.debug(traceback.format_exc())
-            raise HTTPException(status_code=500, detail="An internal error occurred while generating posts.")
-    
+            raise HTTPException(status_code=500, detail="Content generation failed")
+
     except StyleValidationError as e:
         logger.error(f"Style validation error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        # Re-raise any intentionally thrown HTTPExceptions
+        raise
     except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
+        logger.error(f"Unexpected error in style processing: {str(e)}")
         logger.debug(traceback.format_exc())
-        raise HTTPException(status_code=500, detail="An internal error occurred while processing request")
+        raise HTTPException(status_code=500, detail="An internal error occurred while processing the style parameter")
