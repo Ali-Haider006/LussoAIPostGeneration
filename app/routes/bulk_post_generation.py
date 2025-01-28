@@ -104,7 +104,7 @@ async def bulk_generate_post(
                 #     image_color_theme = item.color_theme.split(",")[0].strip()
                 image_color_theme = "test"
 
-                text_image = add_text_overlay(image, tagline, image_color_theme)
+                text_image = add_text_overlay(image, tagline, image_color_theme, './fonts/Roboto-Regular.ttf')
 
                 final_image_bytes = overlay_logo(text_image, logo_bytes)
 
