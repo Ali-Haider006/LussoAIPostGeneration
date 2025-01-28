@@ -17,6 +17,9 @@ from app.utils.download_image_from_url import download_image_from_url
 from app.core.logger import logger
 from app.models.regenerate_image import RegenerationImage
 from app.services.s3 import upload_image_to_s3, BUCKET_NAME
+from app.utils.constants import FONT_LIST
+from app.services.prompt_building import build_prompt_font_selection
+from app.utils.validate_font import get_valid_font
 
 router = APIRouter()
 
@@ -140,7 +143,17 @@ async def regenerate_image(
         
         # Add overlays
         logger.debug("Adding text overlay", extra={"request_id": request_id})
-        text_image = add_text_overlay(image, tagline, image_style)
+        font_prompt = build_prompt_font_selection(item, tagline, FONT_LIST)
+
+        logger.info(f"Generated font prompt: {font_prompt}")
+
+        model_font = fetch_response(font_prompt, item.model)
+
+        font = get_valid_font(model_font.content[0].text, FONT_LIST)
+
+        logger.info(f"Generated font: {font}")
+
+        text_image = add_text_overlay(image, tagline, image_style, font)
         
         logger.debug("Downloading and adding logo", extra={"request_id": request_id})
         final_image_bytes = overlay_logo(text_image, logo_bytes)
