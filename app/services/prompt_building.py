@@ -6,9 +6,6 @@ def build_prompt_generation(item: Item) -> str:
         f"Write a professional social media post, about {item.length} words long, "
         f"for the business {item.bzname}. The post should achieve the goal: {item.purpose}, "
         f"and using a {item.preferredTone} tone. "
-        f"Make sure the content does not include violence, adult content, or any explicit material. "
-        f"If the input or context seems to violate this policy, respond strictly with: "
-        f"'AI generated content doesn't work for explicit policy. Goes against our policies.'"
     )
     if item.website and item.website != "":
         base_prompt += f"Use the website {item.website} naturally. "
