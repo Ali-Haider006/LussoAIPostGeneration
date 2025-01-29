@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Form
+from fastapi import APIRouter, HTTPException, Form, WebSocket, Depends, WebSocketDisconnect
 from app.models.bulk_item import BulkItem
 import io
 from PIL import Image
@@ -15,131 +15,168 @@ from app.services.prompt_building import build_dynamic_image_prompt
 from app.services.s3 import upload_image_to_s3, BUCKET_NAME
 import json
 import traceback
+from typing import Optional
+import uuid
+import asyncio
+from app.sockets.websocket_manager import manager
+from typing import Dict, List
 
 router = APIRouter()
 
-@router.post("/bulk-generate-post")
-async def bulk_generate_post(
-    length: Annotated[int, Form(..., ge=10, le=700)] = 150,
-    bzname: str = Form(...),
-    preferredTone: str = Form(...),
-    website: Annotated[str, Form(...)] = "",
-    hashtags: bool = Form(...),
-    style: str = Form(...),
-    number_of_posts: Annotated[int, Form(..., ge=1, le=30)] = 10,
-    logo: str = Form(...),
-    businessDescription: str = Form(...),
-    facebookPosts: Annotated[str, Form(...)] = "",
-    linkedInPosts: Annotated[str, Form(...)] = "",
-    model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
-):
-    item = BulkItem(
-        length=length,
-        bzname=bzname,
-        purpose="",
-        preferredTone=preferredTone,
-        website=website,
-        hashtags=hashtags,
-        style=style if style else "digital",
-        model=model
-    )
-
-    if hasattr(item, "error"):
-        raise HTTPException(status_code=400, detail=item.error)
-    
-    business_text = get_text_business(businessDescription)
-    posts_linkedIn = []
-    posts_facebook = []
-    if facebookPosts and facebookPosts != "":
-        posts_facebook = get_post_facebook(facebookPosts, number_of_posts)
-    if linkedInPosts and linkedInPosts != "":
-        posts_linkedIn = get_posts_linkedIn(linkedInPosts, number_of_posts)
-    if (facebookPosts and facebookPosts != "") or (linkedInPosts and linkedInPosts != ""):
-        if len(posts_facebook) > len(posts_linkedIn):
-            posts_text = posts_facebook
-        else:
-            posts_text = posts_linkedIn
-    else:
-        posts_text = []
-
-    prompt = build_topics_gen_prompt(posts_text, business_text, number_of_posts)
-    logger.info(f"Generating topics with prompt: {prompt}")
-    input_tokens, output_tokens = 0, 0
+async def process_single_post(
+    topic: str,
+    item: BulkItem,
+    logo_bytes: bytes,
+    output_image: Image.Image,
+    color_proportions: List[dict],
+    model: str
+) -> dict:
+    """Process a single post generation with all required steps."""
     try:
-        topics_res = fetch_response(prompt, model)
-        input_tokens += topics_res.usage.input_tokens
-        output_tokens += topics_res.usage.output_tokens
-        topics = json.loads(topics_res.content[0].text)
-        posts = []
-        logo_bytes = await download_image_from_url(logo)
-        output_image = Image.open(io.BytesIO(logo_bytes)).convert("RGBA")
-
-        color_proportions = extract_color_proportions(output_image)
-        colors = ", ".join([ sub['colorCode'] for sub in color_proportions ])
-
-        for topic in topics["topics"]:
-            try:
-                item.purpose = topic
-                prompt = build_prompt_bulk_generation(item)
-                logger.info(f"Generating post with prompt: {prompt}")
-                post_res = fetch_response(prompt, item.model)
-                input_tokens += post_res.usage.input_tokens
-                output_tokens += post_res.usage.output_tokens
-
-                tagline_prompt = build_prompt_tagline_no_purpose(item, post_res.content[0].text)
-                logger.info(f"Generating tagline with prompt: {tagline_prompt}")
-                
-                tagline = fetch_response(tagline_prompt, "claude-3-5-sonnet-20241022").content[0].text
-                logger.info(f"Generated tagline: {tagline}")
-
-                image_model = "ultra"
-                image_prompt_dynamic = build_dynamic_image_prompt(post_res.content[0].text, item.style, colors)
-
-                image_prompt = fetch_response(image_prompt_dynamic, "claude-3-5-sonnet-20241022").content[0].text
-
-                logger.info(f"Generated image prompt: {image_prompt}")
-
-                image = fetch_image_response(image_prompt, image_model)
-
-                # if not item.color_theme or item.color_theme == "vibrant color theme" or "#" not in item.color_theme:
-                #     image_color_theme = generate_random_hex_color()
-                # else:
-                #     image_color_theme = item.color_theme.split(",")[0].strip()
-                image_color_theme = "test"
-
-                text_image = add_text_overlay(image, tagline, image_color_theme, './fonts/Roboto-Regular.ttf')
-
-                final_image_bytes = overlay_logo(text_image, logo_bytes)
-
-                image_name = f"gen_post_{uuid.uuid4().hex}.jpeg"
-                await upload_image_to_s3(final_image_bytes, image_name) 
-                s3_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{image_name}"
-
-                posts.append({
-                    "topic": topic, 
-                    "post": post_res.content[0].text,
-                    "tagline": tagline,
-                    "image_url": s3_url,	
-                })
-
-            # image_name = f"./imagesp3/gen_post_{post_res.id}.jpeg"
-            # with open(image_name, 'wb') as file:
-            #     file.write(final_image_bytes)
-            #     file.close()
-            
-            except Exception as inner_error:
-                logger.error(f"Error processing topic '{topic}': {inner_error}")
-                logger.debug(traceback.format_exc())
-                   
+        colors = ", ".join([sub['colorCode'] for sub in color_proportions])
+        item.purpose = topic
+        
+        # Generate post content
+        prompt = build_prompt_bulk_generation(item)
+        post_res = fetch_response(prompt, item.model)
+        
+        # Generate tagline
+        tagline_prompt = build_prompt_tagline_no_purpose(item, post_res.content[0].text)
+        tagline = fetch_response(tagline_prompt, "claude-3-5-sonnet-20241022").content[0].text
+        
+        # Generate and process image
+        image_prompt_dynamic = build_dynamic_image_prompt(post_res.content[0].text, item.style, colors)
+        image_prompt = fetch_response(image_prompt_dynamic, "claude-3-5-sonnet-20241022").content[0].text
+        image = fetch_image_response(image_prompt, "ultra")
+        
+        # Process image with overlays
+        text_image = add_text_overlay(image, tagline, "test", './fonts/Roboto-Regular.ttf')
+        final_image_bytes = overlay_logo(text_image, logo_bytes)
+        
+        # Upload to S3
+        image_name = f"gen_post_{uuid.uuid4().hex}.jpeg"
+        await upload_image_to_s3(final_image_bytes, image_name)
+        s3_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{image_name}"
+        
         return {
-            "posts": posts,
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens,
+            "topic": topic,
+            "post": post_res.content[0].text,
+            "tagline": tagline,
+            "image_url": s3_url,
         }
-    
-    except HTTPException as http_exc:
-        raise http_exc
     except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
-        logger.debug(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error processing post for topic '{topic}': {str(e)}")
+        raise
+
+@router.websocket("/ws/bulk-generate/{client_id}")
+async def bulk_post_generation(websocket: WebSocket, client_id: str):
+    await manager.connect(websocket, client_id)
+    try:
+        while True:
+            raw_data = await websocket.receive_text()
+            try:
+                data = json.loads(raw_data) if isinstance(raw_data, str) else json.loads(json.dumps(raw_data))
+            except json.JSONDecodeError as e:
+                await websocket.send_text(json.dumps({
+                    "type": "error",
+                    "message": f"Invalid JSON format: {str(e)}"
+                }))
+                continue
+
+            # Extract business description
+            business_description = data.get("businessDescription", {})
+            business_text = get_text_business(business_description)
+
+            # Validate input parameters
+            try:
+                item = BulkItem(
+                    length=data.get("length", 150),
+                    bzname=data["bzname"],
+                    purpose="",
+                    preferredTone=data["preferredTone"],
+                    website=data.get("website", ""),
+                    hashtags=data["hashtags"],
+                    style=data.get("style", "digital"),
+                    model=data.get("model", "claude-3-5-haiku-20241022")
+                )
+            except ValueError as e:
+                await manager.send_error(client_id, f"Invalid input parameters: {str(e)}")
+                continue
+
+            number_of_posts = min(max(data.get("number_of_posts", 10), 1), 30)
+
+            # Process posts data
+            posts_text = []
+            facebook_posts = data.get("facebookPosts", {})
+            linkedin_posts = data.get("linkedInPosts", {})
+
+            if facebook_posts.get("payload"):
+                posts_facebook = get_post_facebook(facebook_posts["payload"], number_of_posts)
+                posts_text = posts_facebook
+            if linkedin_posts.get("payload"):
+                posts_linkedin = get_posts_linkedIn(linkedin_posts["payload"], number_of_posts)
+                if len(posts_linkedin) > len(posts_text):
+                    posts_text = posts_linkedin
+
+            # Generate topics
+            try:
+                print(posts_text, business_text, number_of_posts)
+                prompt = build_topics_gen_prompt(posts_text, business_text, number_of_posts)
+                print(prompt)
+                topics_res = fetch_response(prompt, item.model)
+                topics_data = topics_res.content[0].text
+                if isinstance(topics_data, str):
+                    topics = json.loads(topics_data)["topics"]
+                else:
+                    topics = topics_data["topics"]            
+                
+            except Exception as e:
+                await manager.send_error(client_id, f"Error generating topics: {str(e)}")
+                continue
+
+            # Process logo
+            try:
+                logo_bytes = await download_image_from_url(data["logo"])
+                output_image = Image.open(io.BytesIO(logo_bytes)).convert("RGBA")
+                color_proportions = extract_color_proportions(output_image)
+            except Exception as e:
+                await manager.send_error(client_id, f"Error processing logo: {str(e)}")
+                continue
+
+            # Process posts with progress updates
+            posts = []
+            for idx, topic in enumerate(topics, 1):
+                try:
+                    post_data = await process_single_post(
+                        topic, item, logo_bytes, output_image, 
+                        color_proportions, item.model
+                    )
+                    posts.append(post_data)
+                    progress_message = {
+                            "type": "progress",
+                            "current": idx,
+                            "total": number_of_posts,
+                            "post_data": post_data
+                        }
+                    await websocket.send_text(json.dumps(progress_message))
+
+                except Exception as e:
+                    await manager.send_error(client_id, f"Error processing post {idx}: {str(e)}")
+                    logger.error(f"Error processing post {idx}: {str(e)}")
+                    continue
+
+                await asyncio.sleep(0.1)
+
+            # Send completion message
+            completion_message = {
+                    "type": "complete",
+                    "posts": posts
+                }
+            await websocket.send_text(json.dumps(completion_message))
+
+    except WebSocketDisconnect:
+        manager.disconnect(client_id)
+    except Exception as e:
+        logger.error(f"WebSocket error: {str(e)}")
+        await manager.send_error(client_id, str(e))
+        manager.disconnect(client_id)
