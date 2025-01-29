@@ -15,19 +15,24 @@ def build_prompt_generation(item: Item) -> str:
 
 def build_prompt_tagline(item: Item, post: str) -> str:
     base_prompt = (
-        f"Write a professional tagline for the post {post}, for the business {item.bzname}, with the purpose {item.purpose}."
-        f"The tagline should be concise, should complement the post content, and can include content from post. "
-        f"Use a {item.preferredTone} tone. Do not include emojis. "
+        f"Write a catchy, professional tagline for the post: {post}. "
+        f"The tagline should be designed for the business {item.bzname}, with the purpose: {item.purpose}. "
+        f"It should be concise, impactful, and should feel natural on an image used for social media. "
+        f"Do not include punctuation, unnecessary words, or anything that makes it sound like a sentence. "
+        f"Focus on creating a tagline that is memorable, creative, and attention-grabbing. "
+        f"Do not include emojis, and keep the tagline very direct. "
     )
     return base_prompt + "Do not include any introductory or opening or ending or closing text."
 
 def build_prompt_tagline_no_purpose(item: Item, post: str) -> str:
     base_prompt = (
-        f"Write a professional tagline for the post {post}, for the business {item.bzname}. "
-        f"The tagline should be concise, should complement the post content, and can include content from post. "
-        f"Use a {item.preferredTone} tone. Do not include emojis. "
+        f"Write a catchy, professional tagline for the post: {post}. "
+        f"The tagline should be designed for the business {item.bzname}. "
+        f"It should be concise, impactful, and should feel natural on an image used for social media. "
+        f"Do not include punctuation, unnecessary words, or anything that makes it sound like a sentence. "
+        f"Focus on creating a tagline that is memorable, creative, and attention-grabbing. "
     )
-    return base_prompt + "Do not include any introductory or opening or ending or closing text."
+    return base_prompt + "Do not include any introductory or opening or ending or closing text, and keep the tagline very direct."
 
 
 def build_prompt_regeneration(item: RegenerationItem) -> str:
@@ -192,3 +197,16 @@ def build_prompt_bulk_generation(item: Item) -> str:
     if item.website and item.website != "":
         base_prompt += f"Use the website {item.website} naturally. "
     return base_prompt + "Include relevant hashtags. Do not include any introductory or opening or ending or closing text."
+
+def build_prompt_font_selection(item: Item, tagline: str, font_list: list) -> str:
+    base_prompt = (
+        f"Select the most appropriate font from the following list for overlaying the tagline '{tagline}' on an image. "
+        f"The font should align with the brand {item.bzname} and should align with image's style of: {item.style}. "
+        f"Consider the tone of the tagline and the target audience while making the selection. "
+        f"Here is the list of fonts:\n"
+        f"{', '.join(font_list)}\n\n"
+        f"Please provide the exact font name (including the file extension, e.g., 'AbrilFatface-Regular.ttf') "
+        f"and nothing else. Do not add any commentary, punctuation, or formatting. "
+        "Do not include any introductory or opening or ending or closing text."
+    )
+    return base_prompt

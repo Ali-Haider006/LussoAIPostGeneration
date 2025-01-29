@@ -60,9 +60,19 @@ def overlay_logo(base_image_bytes, logo_bytes, position="bottom-right"):
 
     return output_buffer.read()
 
+# def get_contrasting_text_color(bg_color):
+#     brightness = (0.299 * bg_color[0] + 0.587 * bg_color[1] + 0.114 * bg_color[2])
+#     return (255, 255, 255) if brightness < 128 else (0, 0, 0)
+
 def get_contrasting_text_color(bg_color):
-    brightness = (0.299 * bg_color[0] + 0.587 * bg_color[1] + 0.114 * bg_color[2])
-    return (255, 255, 255) if brightness < 128 else (0, 0, 0)
+    r, g, b = bg_color
+    complementary_color = (255 - r, 255 - g, 255 - b)
+    brightness = (0.299 * r + 0.587 * g + 0.114 * b)
+    if brightness < 128:
+        contrasting_color = tuple(min(c + 50, 255) for c in complementary_color)
+    else:
+        contrasting_color = tuple(max(c - 50, 0) for c in complementary_color)
+    return contrasting_color
 
 def wrap_text(draw, text, font, max_width):
     lines = []
@@ -74,7 +84,7 @@ def wrap_text(draw, text, font, max_width):
         lines.append(line)
     return '\n'.join(lines)
 
-def add_text_overlay(image_path, text, bg_color):
+def add_text_overlay(image_path, text, bg_color, font_file):
     position = random.choice(["top-left", "center-left", "bottom-left"])
     image = Image.open(io.BytesIO(image_path)).convert("RGBA")
     bg_color = extract_color_proportions(image)[0]["colorCode"]
@@ -97,7 +107,7 @@ def add_text_overlay(image_path, text, bg_color):
     draw = ImageDraw.Draw(overlay)
     
     fade_start = int(bg_width * 0.8) 
-    base_alpha = 230 
+    base_alpha = 180 
     
     for i in range(bg_width):
         if i < fade_start:
@@ -113,11 +123,11 @@ def add_text_overlay(image_path, text, bg_color):
             )
     
     font_size = 1
-    font = ImageFont.truetype("NotoSans-Medium.ttf", font_size)
+    font = ImageFont.truetype(font_file, font_size)
     max_width, max_height = int(bg_width * 0.95), int(bg_height * 0.8)
     
     while True:
-        font = ImageFont.truetype("NotoSans-Medium.ttf", font_size)
+        font = ImageFont.truetype(font_file, font_size)
         wrapped_text = wrap_text(draw, text, font, max_width)
         text_width, text_height = draw.textbbox((0, 0), wrapped_text, font=font)[2:]
         if text_width > max_width or text_height > max_height:
@@ -125,7 +135,7 @@ def add_text_overlay(image_path, text, bg_color):
         font_size += 1
     
     font_size -= 1
-    font = ImageFont.truetype("NotoSans-Medium.ttf", font_size)
+    font = ImageFont.truetype(font_file, font_size)
     wrapped_text = wrap_text(draw, text, font, max_width)
     
     text_x = bg_x + 25

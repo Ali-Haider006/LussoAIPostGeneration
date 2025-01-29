@@ -7,12 +7,15 @@ from app.services.prompt_building import build_prompt_generation, build_prompt_t
 from app.services.api_calls import fetch_response, fetch_image_response
 from app.services.image_processing import overlay_logo, add_text_overlay, generate_random_hex_color
 from app.services.s3 import upload_image_to_s3, BUCKET_NAME
-from typing_extensions import Annotated, Optional
+from typing_extensions import Annotated
 from app.utils.download_image_from_url import download_image_from_url
 from app.core.logger import logger
 import uuid
 from app.services.prompt_building import build_dynamic_image_prompt
 from app.errors.style_validation_error import StyleValidationError, StyleRequest
+from app.utils.constants import FONT_LIST
+from app.services.prompt_building import build_prompt_font_selection
+from app.utils.validate_font import get_valid_font
 import traceback
 
 router = APIRouter()
@@ -74,8 +77,18 @@ async def generate_post(
                 image_style = generate_random_hex_color()
             else:
                 image_style = item.style.split(",")[0].strip()
+            
+            font_prompt = build_prompt_font_selection(item, tagline, FONT_LIST)
 
-            text_image = add_text_overlay(image, tagline, image_style)
+            logger.info(f"Generated font prompt: {font_prompt}")
+
+            model_font = fetch_response(font_prompt, item.model)
+
+            font = get_valid_font(model_font.content[0].text, FONT_LIST)
+
+            logger.info(f"Generated font: {font}")
+
+            text_image = add_text_overlay(image, tagline, image_style, font)
 
             final_image_bytes = overlay_logo(text_image, logo_bytes)
 
@@ -96,7 +109,7 @@ async def generate_post(
         
         except HTTPException as http_exc:
             logger.warning(f"HTTP exception: {http_exc.detail}")
-            raise
+            raise HTTPException(status_code=400, detail="HTTP exception")
         except ValueError as val_err:
             logger.error(f"Value error encountered: {val_err}")
             raise HTTPException(status_code=400, detail="Invalid input data")
@@ -109,6 +122,6 @@ async def generate_post(
         logger.error(f"Style validation error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Unexpected error in style processing: {str(e)}")
+        logger.error(f"Unexpected error: {str(e)}")
         logger.debug(traceback.format_exc())
-        raise HTTPException(status_code=500, detail="An internal error occurred while processing the style parameter")
+        raise HTTPException(status_code=500, detail="An internal error occurred while processing request")
