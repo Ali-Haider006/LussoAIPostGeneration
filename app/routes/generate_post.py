@@ -12,7 +12,6 @@ from app.utils.download_image_from_url import download_image_from_url
 from app.core.logger import logger
 import uuid
 from app.services.prompt_building import build_dynamic_image_prompt
-from app.errors.style_validation_error import StyleValidationError, StyleRequest
 from app.utils.constants import FONT_LIST
 from app.services.prompt_building import build_prompt_font_selection
 from app.utils.validate_font import get_valid_font
@@ -33,9 +32,6 @@ async def generate_post(
     model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
 ):
     try:
-        style_request = StyleRequest(style=style)
-        validated_style = style_request.style
-
         item = Item(
             length=length,
             bzname=bzname,
@@ -43,9 +39,13 @@ async def generate_post(
             preferredTone=preferredTone,
             website=website,
             hashtags=hashtags,
-            style=validated_style if validated_style else "digital",
+            style=style if style else "digital",
             model=model
         )
+
+        if hasattr(item, "error"):
+            raise HTTPException(status_code=400, detail=item.error)
+
         try:
             logo_bytes = await download_image_from_url(logo)
             output_image = Image.open(io.BytesIO(logo_bytes)).convert("RGBA")
@@ -95,7 +95,7 @@ async def generate_post(
             # Generate unique image name
             image_name = f"gen_post_{uuid.uuid4().hex}.jpeg"
             # Upload image to S3
-            upload_image_to_s3(final_image_bytes, image_name) 
+            await upload_image_to_s3(final_image_bytes, image_name) 
             # Generate S3 URL
             s3_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{image_name}"
 
@@ -118,10 +118,9 @@ async def generate_post(
             logger.debug(traceback.format_exc())
             raise HTTPException(status_code=500, detail="An internal error occurred while generating posts.")
     
-    except StyleValidationError as e:
-        logger.error(f"Style validation error: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException as http_exc:
+        raise http_exc
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}")
         logger.debug(traceback.format_exc())
-        raise HTTPException(status_code=500, detail="An internal error occurred while processing request")
+        raise HTTPException(status_code=500, detail=str(e))

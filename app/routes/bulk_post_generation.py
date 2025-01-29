@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Form
-from app.models.item import Item
+from app.models.bulk_item import BulkItem
 import io
 from PIL import Image
 from app.services.image_processing import extract_color_proportions
@@ -33,7 +33,7 @@ async def bulk_generate_post(
     linkedInPosts: Annotated[str, Form(...)] = "",
     model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
 ):
-    item = Item(
+    item = BulkItem(
         length=length,
         bzname=bzname,
         purpose="",
@@ -43,6 +43,9 @@ async def bulk_generate_post(
         style=style if style else "digital",
         model=model
     )
+
+    if hasattr(item, "error"):
+        raise HTTPException(status_code=400, detail=item.error)
     
     business_text = get_text_business(businessDescription)
     posts_linkedIn = []
@@ -108,11 +111,8 @@ async def bulk_generate_post(
 
                 final_image_bytes = overlay_logo(text_image, logo_bytes)
 
-                # Generate unique image name
                 image_name = f"gen_post_{uuid.uuid4().hex}.jpeg"
-                # Upload image to S3
-                upload_image_to_s3(final_image_bytes, image_name) 
-                # Generate S3 URL
+                await upload_image_to_s3(final_image_bytes, image_name) 
                 s3_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{image_name}"
 
                 posts.append({
@@ -138,12 +138,8 @@ async def bulk_generate_post(
         }
     
     except HTTPException as http_exc:
-        logger.warning(f"HTTP exception: {http_exc.detail}")
-        raise
-    except ValueError as val_err:
-        logger.error(f"Value error encountered: {val_err}")
-        raise HTTPException(status_code=400, detail="Invalid input data")
+        raise http_exc
     except Exception as e:
-        logger.error(f"Unhandled error: {e}")
+        logger.error(f"Unexpected error: {str(e)}")
         logger.debug(traceback.format_exc())
-        raise HTTPException(status_code=500, detail="An internal error occurred while generating posts.")
+        raise HTTPException(status_code=500, detail=str(e))
