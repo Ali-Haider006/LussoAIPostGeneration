@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field, root_validator, validator
 from typing_extensions import Annotated
 from typing import Optional, Dict
 
-class Item(BaseModel):
+class BulkItem(BaseModel):
     length: Annotated[int, Field(strict=True, ge=10, le=700)] = 150
     bzname: str
     purpose: str
@@ -11,12 +11,6 @@ class Item(BaseModel):
     hashtags: bool
     style: str
     model: Annotated[str, Field(min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
-
-    @validator("purpose")
-    def validate_purpose(cls, value):
-        if not value or len(value.split()) < 5:
-            raise ValueError("Purpose must be at least 5 words long.")
-        return value
 
     @validator("style")
     def validate_style(cls, value):
