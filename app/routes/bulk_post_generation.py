@@ -43,6 +43,9 @@ async def bulk_generate_post(
         style=style if style else "digital",
         model=model
     )
+
+    if hasattr(item, "error"):
+        raise HTTPException(status_code=400, detail=item.error)
     
     business_text = get_text_business(businessDescription)
     posts_linkedIn = []
@@ -135,12 +138,8 @@ async def bulk_generate_post(
         }
     
     except HTTPException as http_exc:
-        logger.warning(f"HTTP exception: {http_exc.detail}")
-        raise
-    except ValueError as val_err:
-        logger.error(f"Value error encountered: {val_err}")
-        raise HTTPException(status_code=400, detail=val_err)
+        raise http_exc
     except Exception as e:
-        logger.error(f"Unhandled error: {e}")
+        logger.error(f"Unexpected error: {str(e)}")
         logger.debug(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
