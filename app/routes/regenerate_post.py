@@ -48,9 +48,7 @@ async def regenerate_post(
     count: int = Form(...),
     model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022",
 ) -> Dict[str, Union[str, int]]:
-    """
-    Regenerate a post using AI model based on input parameters.
-    
+    """    
     Args:
         post (str): Original post content
         suggestion (str, optional): Suggestion for regeneration
@@ -156,5 +154,5 @@ async def regenerate_post(
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=error_msg
+            detail=error_msg 
         )
