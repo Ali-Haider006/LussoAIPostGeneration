@@ -20,6 +20,7 @@ import uuid
 import asyncio
 from app.sockets.websocket_manager import manager
 from typing import Dict, List
+from pydantic import ValidationError
 
 router = APIRouter()
 
@@ -85,31 +86,43 @@ async def bulk_post_generation(websocket: WebSocket, client_id: str):
 
             # Extract business description
             business_description = data.get("businessDescription", {})
+            facebook_posts = data.get("facebookPosts", {})
+            linkedin_posts = data.get("linkedInPosts", {})
             business_text = get_text_business(business_description)
 
-            # Validate input parameters
             try:
                 item = BulkItem(
                     length=data.get("length", 150),
-                    bzname=data["bzname"],
+                    bzname=data.get("bzname", ""), 
                     purpose="",
-                    preferredTone=data["preferredTone"],
+                    preferredTone=data.get("preferredTone", ""),
                     website=data.get("website", ""),
-                    hashtags=data["hashtags"],
+                    hashtags=data.get("hashtags", False),
                     style=data.get("style", "digital"),
                     model=data.get("model", "claude-3-5-haiku-20241022")
                 )
-            except ValueError as e:
-                await manager.send_error(client_id, f"Invalid input parameters: {str(e)}")
+            except ValidationError as e:
+                error_messages = []
+                for error in e.errors():
+                    field = error["loc"][0]
+                    msg = error["msg"]
+                    error_messages.append(f"{field}: {msg}")
+                
+                formatted_error = {
+                    "type": "validation_error",
+                    "errors": error_messages,
+                    "message": "Validation failed for the following fields: " + ", ".join(error_messages)
+                }
+                await manager.send_error(client_id, json.dumps(formatted_error))
+                continue
+            except Exception as e:
+                await manager.send_error(client_id, f"Unexpected error during validation: {str(e)}")
                 continue
 
             number_of_posts = min(max(data.get("number_of_posts", 10), 1), 30)
 
             # Process posts data
             posts_text = []
-            facebook_posts = data.get("facebookPosts", {})
-            linkedin_posts = data.get("linkedInPosts", {})
-
             if facebook_posts.get("payload"):
                 posts_facebook = get_post_facebook(facebook_posts["payload"], number_of_posts)
                 posts_text = posts_facebook
@@ -177,6 +190,6 @@ async def bulk_post_generation(websocket: WebSocket, client_id: str):
     except WebSocketDisconnect:
         manager.disconnect(client_id)
     except Exception as e:
-        logger.error(f"WebSocket error: {str(e)}")
-        await manager.send_error(client_id, str(e))
+        logger.error(f"WebSocket error: {traceback.format_exc()}")
+        await manager.send_error(client_id, f"An unexpected error occurred: {str(e)}")
         manager.disconnect(client_id)

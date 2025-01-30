@@ -18,4 +18,18 @@ class BulkItem(BaseModel):
             raise ValueError("Style parameter cannot be empty.")
         if len(value) > 300:
             raise ValueError("Custom style description cannot exceed 300 characters.")
+        return value.strip() 
+
+    @validator("bzname")
+    def validate_bzname(cls, value):
+        if not value or value.strip() == "":
+            raise ValueError("Bzname parameter cannot be empty.")
+        if len(value) > 100:
+            raise ValueError("Bzname cannot exceed 100 characters.")
+        return value.strip() 
+    
+    @validator("preferredTone")
+    def validate_preferredTone(cls, value):
+        if not value or value.strip() == "":
+            raise ValueError("Preferred Tone parameter cannot be empty.")
         return value.strip()
