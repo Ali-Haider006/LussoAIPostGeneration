@@ -13,10 +13,11 @@ import uuid
 from app.services.prompt_building import build_dynamic_image_prompt
 from app.services.s3 import upload_image_to_s3, BUCKET_NAME
 import json
-import uuid
 import asyncio
 from app.sockets.websocket_manager import manager
 from typing import Dict, List
+from app.utils.constants import FONT_LIST
+from app.utils.validate_font import get_valid_font
 
 router = APIRouter()
 
