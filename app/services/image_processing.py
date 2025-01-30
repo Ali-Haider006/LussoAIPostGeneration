@@ -98,16 +98,18 @@ def add_text_overlay(image_path, text, bg_color, font_file):
     bg_x = 0
     if position == "top-left":
         bg_y = int(height * 0.15)
+        base_alpha = 0 
     elif position == "center-left":
         bg_y = int(height * 0.5 - bg_height * 0.5)
+        base_alpha = 0 
     else:
         bg_y = int(height * 0.75)
+        base_alpha = 180 
     
     overlay = Image.new("RGBA", image.size, (255, 255, 255, 0))
     draw = ImageDraw.Draw(overlay)
     
     fade_start = int(bg_width * 0.8) 
-    base_alpha = 180 
     
     for i in range(bg_width):
         if i < fade_start:
