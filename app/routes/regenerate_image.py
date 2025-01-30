@@ -164,7 +164,7 @@ async def regenerate_image(
             "request_id": request_id,
             "image_name": image_name
         })
-        upload_image_to_s3(final_image_bytes, image_name)
+        await upload_image_to_s3(final_image_bytes, image_name)
         
         s3_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{image_name}"
         

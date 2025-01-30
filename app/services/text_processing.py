@@ -2,20 +2,6 @@ import json
 from app.core.logger import logger
 
 def get_post_facebook(data, limit=None):
-    """
-    Recursively find all 'Text' fields in the Facebook dataset.
-    
-    Args:
-        data: JSON string or dict containing Facebook post data
-        limit: Optional maximum number of posts to return
-        
-    Returns:
-        list: List of extracted text posts
-        
-    Raises:
-        ValueError: If data is invalid or cannot be parsed
-        TypeError: If input types are incorrect
-    """
     try:
         # Handle both string and dict input
         if isinstance(data, str):
@@ -60,20 +46,6 @@ def get_post_facebook(data, limit=None):
         return []
 
 def get_posts_linkedIn(data, limit=None):
-    """
-    Extract posts from LinkedIn data structure.
-    
-    Args:
-        data: JSON string or dict containing LinkedIn post data
-        limit: Optional maximum number of posts to return
-        
-    Returns:
-        list: List of extracted post comments
-        
-    Raises:
-        ValueError: If data is invalid or cannot be parsed
-        KeyError: If required fields are missing
-    """
     try:
         # Handle both string and dict input
         if isinstance(data, str):

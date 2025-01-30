@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 import traceback
 import io
 from PIL import Image
+import uuid
 
 from app.services.image_processing import remove_background, extract_color_proportions
 from app.utils.download_image_from_url import download_image_from_url
@@ -40,7 +41,7 @@ async def process_image(file: str = Form(...)) -> JSONResponse:
     Raises:
         HTTPException: Various exceptions based on the error type
     """
-    request_id = None  # You might want to get this from a request context
+    request_id = str(uuid.uuid4())
     
     logger.info(f"Starting image processing request", extra={
         "request_id": request_id,
