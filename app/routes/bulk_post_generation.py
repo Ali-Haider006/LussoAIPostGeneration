@@ -3,24 +3,20 @@ from app.models.bulk_item import BulkItem
 import io
 from PIL import Image
 from app.services.image_processing import extract_color_proportions
-from app.services.prompt_building import build_prompt_bulk_generation, build_prompt_tagline_no_purpose, build_topics_gen_prompt
+from app.services.prompt_building import build_prompt_bulk_generation, build_prompt_tagline_no_purpose, build_topics_gen_prompt, build_prompt_font_selection
 from app.services.api_calls import fetch_response, fetch_image_response
-from app.services.image_processing import overlay_logo, add_text_overlay, generate_random_hex_color
+from app.services.image_processing import overlay_logo, add_text_overlay
 from app.services.text_processing import get_post_facebook, get_posts_linkedIn, get_text_business
-from typing_extensions import Annotated, Optional
 from app.utils.download_image_from_url import download_image_from_url
 from app.core.logger import logger
 import uuid
 from app.services.prompt_building import build_dynamic_image_prompt
 from app.services.s3 import upload_image_to_s3, BUCKET_NAME
 import json
-import traceback
-from typing import Optional
 import uuid
 import asyncio
 from app.sockets.websocket_manager import manager
 from typing import Dict, List
-from pydantic import ValidationError
 
 router = APIRouter()
 
@@ -49,9 +45,19 @@ async def process_single_post(
         image_prompt_dynamic = build_dynamic_image_prompt(post_res.content[0].text, item.style, colors)
         image_prompt = fetch_response(image_prompt_dynamic, "claude-3-5-sonnet-20241022").content[0].text
         image = fetch_image_response(image_prompt, "ultra")
+
+        font_prompt = build_prompt_font_selection(item, tagline, FONT_LIST)
+
+        logger.info(f"Generated font prompt: {font_prompt}")
+
+        model_font = fetch_response(font_prompt, item.model)
+
+        font = get_valid_font(model_font.content[0].text, FONT_LIST)
+
+        logger.info(f"Generated font: {font}")
         
         # Process image with overlays
-        text_image = add_text_overlay(image, tagline, "test", './fonts/Roboto-Regular.ttf')
+        text_image = add_text_overlay(image, tagline, "test", font)
         final_image_bytes = overlay_logo(text_image, logo_bytes)
         
         # Upload to S3
@@ -133,9 +139,7 @@ async def bulk_post_generation(websocket: WebSocket, client_id: str):
 
             # Generate topics
             try:
-                print(posts_text, business_text, number_of_posts)
                 prompt = build_topics_gen_prompt(posts_text, business_text, number_of_posts)
-                print(prompt)
                 topics_res = fetch_response(prompt, item.model)
                 topics_data = topics_res.content[0].text
                 if isinstance(topics_data, str):
