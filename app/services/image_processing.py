@@ -125,14 +125,12 @@ def add_text_overlay(image_path, text, bg_color, font_file):
     bg_x = 0 if "left" in best_position else width - bg_width
     if best_position.startswith("top"):
         bg_y = int(height * 0.15)
-        base_alpha = 0
     elif best_position.startswith("center"):
         bg_y = (height - bg_height) // 2
-        base_alpha = 0
     else:
         bg_y = int(height * 0.75)
-        base_alpha = 180
-    
+
+    base_alpha = 180
     fade_start = int(bg_width * 0.8) if "left" in best_position else int(bg_width * 0.2)
     
     overlay = Image.new("RGBA", image.size, (255, 255, 255, 0))
