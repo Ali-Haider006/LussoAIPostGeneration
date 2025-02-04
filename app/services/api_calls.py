@@ -47,3 +47,35 @@ def fetch_image_response(image_prompt: str, model: str):
         raise HTTPException(status_code=response.status_code, detail="Unable to generate image") 
     except HTTPException as http_exc:
         raise http_exc
+
+def fetch_overlay_position(image: str, prompt: str, model: str) -> str:
+    try:
+        response = client.messages.create(
+            model=model,
+            system="You are an expert in image analysis. Your task is to analyze the given image and suggest the best text overlay position among these options: "
+                   '"top-left", "center-left", "bottom-left", "top-right", "center-right", "bottom-right". '
+                   "Ensure the position avoids covering faces, key objects, or important content in the image.",
+            max_tokens=1024,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "image/jpeg",
+                                "data": image,
+                            }
+                        },
+                        {"type": "text", "text": prompt}
+                    ]
+                }
+            ]
+        )
+
+        return response.content if response else "No response received"
+    except Exception as e:
+        logger.error(f"Error while fetching overlay position: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+    

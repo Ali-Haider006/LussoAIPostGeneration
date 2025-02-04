@@ -18,6 +18,7 @@ def build_prompt_tagline(item: Item, post: str) -> str:
         f"Write a catchy, professional tagline for the post: {post}. "
         f"The tagline should be designed for the business {item.bzname}, with the purpose: {item.purpose}. "
         f"It should be concise, impactful, and should feel natural on an image used for social media. "
+        f"Ensure the tagline is exactly 6 to 8 words long. "
         f"Do not include punctuation, unnecessary words, or anything that makes it sound like a sentence. "
         f"Focus on creating a tagline that is memorable, creative, and attention-grabbing. "
         f"Do not include emojis, and keep the tagline very direct. "
@@ -29,6 +30,7 @@ def build_prompt_tagline_no_purpose(item: Item, post: str) -> str:
         f"Write a catchy, professional tagline for the post: {post}. "
         f"The tagline should be designed for the business {item.bzname}. "
         f"It should be concise, impactful, and should feel natural on an image used for social media. "
+        f"Ensure the tagline is exactly 6 to 8 words long. "
         f"Do not include punctuation, unnecessary words, or anything that makes it sound like a sentence. "
         f"Focus on creating a tagline that is memorable, creative, and attention-grabbing. "
     )
@@ -210,3 +212,13 @@ def build_prompt_font_selection(item: Item, tagline: str, font_list: list) -> st
         "Do not include any introductory or opening or ending or closing text."
     )
     return base_prompt
+
+def build_prompt_position_selection() -> str:
+    return (
+        f"Analyze the given image and determine the best text overlay position from the following options: "
+        f"'top-left', 'center-left', 'bottom-left', 'top-right', 'center-right', 'bottom-right'. "
+        f"The position should ensure that the text does not cover any important elements such as faces, key objects, or high-contrast areas. "
+        f"Consider the composition, focal points, and visual balance of the image while making the selection. "
+        f"Please provide only the exact position name (e.g., 'bottom-right') and nothing else. "
+        "Do not include any introductory or opening or ending or closing text."
+    )

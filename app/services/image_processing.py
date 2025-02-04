@@ -84,39 +84,42 @@ def wrap_text(draw, text, font, max_width):
         lines.append(line)
     return '\n'.join(lines)
 
-def add_text_overlay(image_path, text, bg_color, font_file):
-    position = random.choice(["top-left", "center-left", "bottom-left"])
+def add_text_overlay(image_path, text, bg_color, font_file, position):
     image = Image.open(io.BytesIO(image_path)).convert("RGBA")
     bg_color = extract_color_proportions(image)[0]["colorCode"]
     bg_color = bg_color.lstrip('#')
     bg_color = tuple(int(bg_color[i:i+2], 16) for i in (0, 2, 4))
-
     width, height = image.size
-    
+    best_position = position
     bg_width = int(width * 0.7)
     bg_height = int(height * 0.2)
-    bg_x = 0
-    if position == "top-left":
+
+    bg_x = 0 if "left" in best_position else width - bg_width
+    if best_position.startswith("top"):
         bg_y = int(height * 0.15)
-        base_alpha = 0 
-    elif position == "center-left":
-        bg_y = int(height * 0.5 - bg_height * 0.5)
-        base_alpha = 0 
+    elif best_position.startswith("center"):
+        bg_y = (height - bg_height) // 2
     else:
         bg_y = int(height * 0.75)
-        base_alpha = 180 
+        
+    base_alpha = 180
+    fade_start = int(bg_width * 0.8) if "left" in best_position else int(bg_width * 0.2)
     
     overlay = Image.new("RGBA", image.size, (255, 255, 255, 0))
     draw = ImageDraw.Draw(overlay)
     
-    fade_start = int(bg_width * 0.8) 
-    
     for i in range(bg_width):
-        if i < fade_start:
-            alpha = base_alpha - (i / fade_start) * 10
+        if "left" in best_position:
+            if i < fade_start:
+                alpha = base_alpha - (i / fade_start) * 10
+            else:
+                alpha = base_alpha * (1 - ((i - fade_start) / (bg_width - fade_start)) ** 0.95)
         else:
-            alpha = base_alpha * (1 - ((i - fade_start) / (bg_width - fade_start)) ** 0.95)
-            
+            if i < fade_start:
+                alpha = base_alpha * (i / fade_start)
+            else:
+                alpha = base_alpha * (1 - ((i - fade_start) / (bg_width - fade_start)) ** 0.95)
+        
         for j in range(bg_height):
             vert_alpha = alpha * (0.95 + 0.05 * math.sin(j / bg_height * math.pi))
             draw.rectangle(

@@ -3,8 +3,8 @@ from app.models.bulk_item import BulkItem
 import io
 from PIL import Image
 from app.services.image_processing import extract_color_proportions
-from app.services.prompt_building import build_prompt_bulk_generation, build_prompt_tagline_no_purpose, build_topics_gen_prompt, build_prompt_font_selection
-from app.services.api_calls import fetch_response, fetch_image_response
+from app.services.prompt_building import build_prompt_bulk_generation, build_prompt_tagline_no_purpose, build_topics_gen_prompt, build_prompt_font_selection, build_prompt_position_selection
+from app.services.api_calls import fetch_response, fetch_image_response, fetch_overlay_position
 from app.services.image_processing import overlay_logo, add_text_overlay
 from app.services.text_processing import get_post_facebook, get_posts_linkedIn, get_text_business
 from app.utils.download_image_from_url import download_image_from_url
@@ -18,6 +18,8 @@ from app.sockets.websocket_manager import manager
 from typing import Dict, List
 from app.utils.constants import FONT_LIST
 from app.utils.validate_font import get_valid_font
+from app.utils.encode_image import encode_image
+from app.utils.validate_position import get_valid_overlay_position
 
 router = APIRouter()
 
@@ -57,8 +59,15 @@ async def process_single_post(
 
         logger.info(f"Generated font: {font}")
         
-        # Process image with overlays
-        text_image = add_text_overlay(image, tagline, "test", font)
+        position_prompt = build_prompt_position_selection()
+        image_encodeed = encode_image(image)
+        position = fetch_overlay_position(image_encodeed, position_prompt, "claude-3-5-sonnet-20241022")[0].text
+
+        position = get_valid_overlay_position(position)
+
+        logger.info(f"Generated position: {position}")
+
+        text_image = add_text_overlay(image, tagline, image_style, font, position)
         final_image_bytes = overlay_logo(text_image, logo_bytes)
         
         # Upload to S3

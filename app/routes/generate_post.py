@@ -3,8 +3,8 @@ import io
 from PIL import Image
 from app.services.image_processing import extract_color_proportions
 from app.models.item import Item
-from app.services.prompt_building import build_prompt_generation, build_prompt_tagline
-from app.services.api_calls import fetch_response, fetch_image_response
+from app.services.prompt_building import build_prompt_generation, build_prompt_tagline, build_prompt_position_selection
+from app.services.api_calls import fetch_response, fetch_image_response, fetch_overlay_position
 from app.services.image_processing import overlay_logo, add_text_overlay, generate_random_hex_color
 from app.services.s3 import upload_image_to_s3, BUCKET_NAME
 from typing_extensions import Annotated
@@ -15,6 +15,8 @@ from app.services.prompt_building import build_dynamic_image_prompt
 from app.utils.constants import FONT_LIST
 from app.services.prompt_building import build_prompt_font_selection
 from app.utils.validate_font import get_valid_font
+from app.utils.encode_image import encode_image
+from app.utils.validate_position import get_valid_overlay_position
 import traceback
 
 router = APIRouter()
@@ -88,7 +90,15 @@ async def generate_post(
 
             logger.info(f"Generated font: {font}")
 
-            text_image = add_text_overlay(image, tagline, image_style, font)
+            position_prompt = build_prompt_position_selection()
+            image_encodeed = encode_image(image)
+            position = fetch_overlay_position(image_encodeed, position_prompt, "claude-3-5-sonnet-20241022")[0].text
+
+            position = get_valid_overlay_position(position)
+
+            logger.info(f"Generated position: {position}")
+
+            text_image = add_text_overlay(image, tagline, image_style, font, position)
 
             final_image_bytes = overlay_logo(text_image, logo_bytes)
 

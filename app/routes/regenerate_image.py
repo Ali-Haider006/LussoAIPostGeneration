@@ -6,8 +6,8 @@ import traceback
 import io
 from PIL import Image
 from app.services.image_processing import extract_color_proportions
-from app.services.prompt_building import build_prompt_tagline_no_purpose, build_dynamic_image_prompt_purpose
-from app.services.api_calls import fetch_response, fetch_image_response
+from app.services.prompt_building import build_prompt_tagline_no_purpose, build_dynamic_image_prompt_purpose, build_prompt_position_selection
+from app.services.api_calls import fetch_response, fetch_image_response, fetch_overlay_position
 from app.services.image_processing import (
     overlay_logo, 
     add_text_overlay, 
@@ -20,6 +20,8 @@ from app.services.s3 import upload_image_to_s3, BUCKET_NAME
 from app.utils.constants import FONT_LIST
 from app.services.prompt_building import build_prompt_font_selection
 from app.utils.validate_font import get_valid_font
+from app.utils.encode_image import encode_image
+from app.utils.validate_position import get_valid_overlay_position
 
 router = APIRouter()
 
@@ -152,8 +154,15 @@ async def regenerate_image(
         font = get_valid_font(model_font.content[0].text, FONT_LIST)
 
         logger.info(f"Generated font: {font}")
+        position_prompt = build_prompt_position_selection()
+        image_encodeed = encode_image(image)
+        position = fetch_overlay_position(image_encodeed, position_prompt, "claude-3-5-sonnet-20241022")[0].text
 
-        text_image = add_text_overlay(image, tagline, image_style, font)
+        position = get_valid_overlay_position(position)
+
+        logger.info(f"Generated position: {position}")
+
+        text_image = add_text_overlay(image, tagline, image_style, font, position)
         
         logger.debug("Downloading and adding logo", extra={"request_id": request_id})
         final_image_bytes = overlay_logo(text_image, logo_bytes)
