@@ -4,6 +4,7 @@ import extcolors
 import io
 import random
 import math
+import numpy as np
 
 def remove_background(image_bytes: bytes) -> Image.Image:
     try:
@@ -85,38 +86,70 @@ def wrap_text(draw, text, font, max_width):
     return '\n'.join(lines)
 
 def add_text_overlay(image_path, text, bg_color, font_file):
-    position = random.choice(["top-left", "center-left", "bottom-left"])
     image = Image.open(io.BytesIO(image_path)).convert("RGBA")
-    bg_color = extract_color_proportions(image)[0]["colorCode"]
-    bg_color = bg_color.lstrip('#')
-    bg_color = tuple(int(bg_color[i:i+2], 16) for i in (0, 2, 4))
-
     width, height = image.size
+    image_gray = image.convert('L')
     
     bg_width = int(width * 0.7)
     bg_height = int(height * 0.2)
-    bg_x = 0
-    if position == "top-left":
+    
+    positions = [
+        "top-left", "center-left", "bottom-left",
+        "top-right", "center-right", "bottom-right"
+    ]
+    
+    position_scores = []
+    for position in positions:
+        x = 0 if "left" in position else width - bg_width
+        if position.startswith("top"):
+            y = int(height * 0.15)
+        elif position.startswith("center"):
+            y = (height - bg_height) // 2
+        else:
+            y = int(height * 0.75)
+        
+        if x + bg_width > width or y + bg_height > height:
+            continue
+        
+        roi = image_gray.crop((x, y, x + bg_width, y + bg_height))
+        roi_array = np.array(roi)
+        variance = np.var(roi_array)
+        position_scores.append((position, variance))
+    
+    best_position = min(position_scores, key=lambda x: x[1])[0] if position_scores else "top-left"
+    
+    bg_color = extract_color_proportions(image)[0]["colorCode"]
+    bg_color = bg_color.lstrip('#')
+    bg_color = tuple(int(bg_color[i:i+2], 16) for i in (0, 2, 4))
+    
+    bg_x = 0 if "left" in best_position else width - bg_width
+    if best_position.startswith("top"):
         bg_y = int(height * 0.15)
-        base_alpha = 0 
-    elif position == "center-left":
-        bg_y = int(height * 0.5 - bg_height * 0.5)
-        base_alpha = 0 
+        base_alpha = 0
+    elif best_position.startswith("center"):
+        bg_y = (height - bg_height) // 2
+        base_alpha = 0
     else:
         bg_y = int(height * 0.75)
-        base_alpha = 180 
+        base_alpha = 180
+    
+    fade_start = int(bg_width * 0.8) if "left" in best_position else int(bg_width * 0.2)
     
     overlay = Image.new("RGBA", image.size, (255, 255, 255, 0))
     draw = ImageDraw.Draw(overlay)
     
-    fade_start = int(bg_width * 0.8) 
-    
     for i in range(bg_width):
-        if i < fade_start:
-            alpha = base_alpha - (i / fade_start) * 10
+        if "left" in best_position:
+            if i < fade_start:
+                alpha = base_alpha - (i / fade_start) * 10
+            else:
+                alpha = base_alpha * (1 - ((i - fade_start) / (bg_width - fade_start)) ** 0.95)
         else:
-            alpha = base_alpha * (1 - ((i - fade_start) / (bg_width - fade_start)) ** 0.95)
-            
+            if i < fade_start:
+                alpha = base_alpha * (i / fade_start)
+            else:
+                alpha = base_alpha * (1 - ((i - fade_start) / (bg_width - fade_start)) ** 0.95)
+        
         for j in range(bg_height):
             vert_alpha = alpha * (0.95 + 0.05 * math.sin(j / bg_height * math.pi))
             draw.rectangle(
@@ -163,3 +196,72 @@ def generate_random_hex_color():
     
     hex_color = "#" + "".join(f"{value:02X}" for value in channels)
     return hex_color
+
+# def add_text_overlay(image_path, text, bg_color, font_file):
+#     position = random.choice(["top-left", "center-left", "bottom-left"])
+#     image = Image.open(io.BytesIO(image_path)).convert("RGBA")
+#     bg_color = extract_color_proportions(image)[0]["colorCode"]
+#     bg_color = bg_color.lstrip('#')
+#     bg_color = tuple(int(bg_color[i:i+2], 16) for i in (0, 2, 4))
+
+#     width, height = image.size
+    
+#     bg_width = int(width * 0.7)
+#     bg_height = int(height * 0.2)
+#     bg_x = 0
+#     if position == "top-left":
+#         bg_y = int(height * 0.15)
+#         base_alpha = 0 
+#     elif position == "center-left":
+#         bg_y = int(height * 0.5 - bg_height * 0.5)
+#         base_alpha = 0 
+#     else:
+#         bg_y = int(height * 0.75)
+#         base_alpha = 180 
+    
+#     overlay = Image.new("RGBA", image.size, (255, 255, 255, 0))
+#     draw = ImageDraw.Draw(overlay)
+    
+#     fade_start = int(bg_width * 0.8) 
+    
+#     for i in range(bg_width):
+#         if i < fade_start:
+#             alpha = base_alpha - (i / fade_start) * 10
+#         else:
+#             alpha = base_alpha * (1 - ((i - fade_start) / (bg_width - fade_start)) ** 0.95)
+            
+#         for j in range(bg_height):
+#             vert_alpha = alpha * (0.95 + 0.05 * math.sin(j / bg_height * math.pi))
+#             draw.rectangle(
+#                 [bg_x + i, bg_y + j, bg_x + i + 1, bg_y + j + 1],
+#                 fill=(*bg_color, int(vert_alpha)),
+#             )
+    
+#     font_size = 1
+#     font = ImageFont.truetype(font_file, font_size)
+#     max_width, max_height = int(bg_width * 0.95), int(bg_height * 0.8)
+    
+#     while True:
+#         font = ImageFont.truetype(font_file, font_size)
+#         wrapped_text = wrap_text(draw, text, font, max_width)
+#         text_width, text_height = draw.textbbox((0, 0), wrapped_text, font=font)[2:]
+#         if text_width > max_width or text_height > max_height:
+#             break
+#         font_size += 1
+    
+#     font_size -= 1
+#     font = ImageFont.truetype(font_file, font_size)
+#     wrapped_text = wrap_text(draw, text, font, max_width)
+    
+#     text_x = bg_x + 25
+#     text_y = bg_y + (bg_height - draw.textbbox((0, 0), wrapped_text, font=font)[3]) // 2
+#     text_color = get_contrasting_text_color(bg_color)
+#     draw.text((text_x, text_y), wrapped_text, fill=text_color, font=font)
+    
+#     combined = Image.alpha_composite(image, overlay)
+#     combined = combined.convert("RGB")
+    
+#     output_buffer = io.BytesIO()
+#     combined.save(output_buffer, format="PNG")
+#     output_buffer.seek(0)
+#     return output_buffer.read()
