@@ -47,11 +47,18 @@ def overlay_logo(base_image_bytes, logo_bytes, position="bottom-right"):
     if position == "center":
         x = (base_image.width - logo.width) // 2
         y = (base_image.height - logo.height) // 2
-    elif position == "bottom-right":
+    elif position == "top-left":
+        x = 10 
+        y = 10
+    elif position == "bottom-left":
+        x = 10
+        y = base_image.height - logo.height - 10
+    elif position == "top-right":
+        x = base_image.width - logo.width - 10
+        y = 10
+    else:
         x = base_image.width - logo.width - 10
         y = base_image.height - logo.height - 10
-    else:  
-        x, y = 10, 10
 
     base_image.paste(logo, (x, y), logo)
 
@@ -85,7 +92,7 @@ def wrap_text(draw, text, font, max_width):
         lines.append(line)
     return '\n'.join(lines)
 
-def add_text_overlay(image_path, text, bg_color, font_file):
+def add_text_overlay(image_path, text, bg_color, font_file, logo_bytes):
     image = Image.open(io.BytesIO(image_path)).convert("RGBA")
     width, height = image.size
     image_gray = image.convert('L')
@@ -182,7 +189,23 @@ def add_text_overlay(image_path, text, bg_color, font_file):
     output_buffer = io.BytesIO()
     combined.save(output_buffer, format="PNG")
     output_buffer.seek(0)
-    return output_buffer.read()
+    
+    logo_position_list = best_position.split("-")
+    logo_position = ""
+
+    if logo_position_list[0] == "top" or logo_position_list[0] == "center":
+        logo_position = "bottom"
+    else:
+        logo_position = "top"
+
+    if logo_position_list[1] == "left":
+        logo_position += "-right"
+    else:
+        logo_position += "-left"
+    
+    print(logo_position)
+
+    return overlay_logo(output_buffer.read(), logo_bytes, logo_position)
 
 def generate_random_hex_color():
     dominant_channel = random.randint(200, 255)

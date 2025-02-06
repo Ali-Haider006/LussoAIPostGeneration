@@ -1,41 +1,65 @@
 from app.models.item import Item
 from app.models.regeneration_item import RegenerationItem
 
-def build_prompt_generation(item: Item) -> str:
+def build_prompt_generation(item: Item, businessText: str) -> str:
+    businessCategory = businessText["category"]
+    businessDescription = businessText["description"]
+    
     base_prompt = (
         f"Write a professional social media post, about {item.length} words long, "
-        f"for the business {item.bzname}. The post should achieve the goal: {item.purpose}, "
-        f"and using a {item.preferredTone} tone. "
+        f"for the business {item.bzname}. "
+        f"The post should achieve the goal: {item.purpose}. "
+        f"Business Category: {businessCategory}. "
+        f"Business Description: {businessDescription} " 
+        f"Use a {item.preferredTone} tone. "
     )
+    
     if item.website and item.website != "":
         base_prompt += f"Use the website {item.website} naturally. "
+    
     if item.hashtags:
         return base_prompt + "Include relevant hashtags. Do not include any introductory or opening or ending or closing text."
+    
     return base_prompt + "Do not include hashtags. Do not include any introductory or opening or ending or closing text."
 
 def build_prompt_tagline(item: Item, post: str) -> str:
     base_prompt = (
-        f"Write a catchy, professional tagline for the post: {post}. "
-        f"The tagline should be designed for the business {item.bzname}, with the purpose: {item.purpose}. "
-        f"It should be concise, impactful, and should feel natural on an image used for social media. "
-        f"Ensure the tagline is exactly 6 to 8 words long. "
-        f"Do not include punctuation, unnecessary words, or anything that makes it sound like a sentence. "
-        f"Focus on creating a tagline that is memorable, creative, and attention-grabbing. "
-        f"Do not include emojis, and keep the tagline very direct. "
+        f"Create a social media image tagline for '{post}' that contains TWO DISTINCT PARTS separated by a line break: "
+        f"1) A short, memorable slogan (2-4 words) using alliteration, rhyme, or wordplay\n"
+        f"2) A 4-5 word descriptive text explaining {item.purpose} for {item.bzname}\n\n"
+        f"Structure: [Catchy Phrase]\\n[Clear Description]\n"
+        f"Example 1: 'Fresh Finds Forever\\nQuality Goods Daily Drop'\n"
+        f"Example 2: 'Style Unbound\\nTrendsetting Apparel Solutions'\n\n"
+        f"Guidelines:\n"
+        f"- Keep both parts completely separate\n"
+        f"- First part: punchy and emotional\n"
+        f"- Second part: practical and specific\n"
+        f"- No punctuation in either part\n"
+        f"- Avoid forced rhymes, keep natural\n"
+        f"- Focus on clarity over cleverness\n"
+        f"- Directly relate to: {item.purpose}\n"
+        f"- Business name: {item.bzname}\n"
     )
     return base_prompt + "Do not include any introductory or opening or ending or closing text."
 
 def build_prompt_tagline_no_purpose(item: Item, post: str) -> str:
     base_prompt = (
-        f"Write a catchy, professional tagline for the post: {post}. "
-        f"The tagline should be designed for the business {item.bzname}. "
-        f"It should be concise, impactful, and should feel natural on an image used for social media. "
-        f"Ensure the tagline is exactly 6 to 8 words long. "
-        f"Do not include punctuation, unnecessary words, or anything that makes it sound like a sentence. "
-        f"Focus on creating a tagline that is memorable, creative, and attention-grabbing. "
+        f"Create a social media image tagline for '{post}' that contains TWO DISTINCT PARTS separated by a line break: "
+        f"1) A short, memorable slogan (2-4 words) using alliteration, rhyme, or wordplay\n"
+        f"2) A 4-5 word descriptive text explaining {item.purpose} for {item.bzname}\n\n"
+        f"Structure: [Catchy Phrase]\\n[Clear Description]\n"
+        f"Example 1: 'Fresh Finds Forever\\nQuality Goods Daily Drop'\n"
+        f"Example 2: 'Style Unbound\\nTrendsetting Apparel Solutions'\n\n"
+        f"Guidelines:\n"
+        f"- Keep both parts completely separate\n"
+        f"- First part: punchy and emotional\n"
+        f"- Second part: practical and specific\n"
+        f"- No punctuation in either part\n"
+        f"- Avoid forced rhymes, keep natural\n"
+        f"- Focus on clarity over cleverness\n"
+        f"- Directly relate to: {item.purpose}\n"
     )
     return base_prompt + "Do not include any introductory or opening or ending or closing text, and keep the tagline very direct."
-
 
 def build_prompt_regeneration(item: RegenerationItem) -> str:
     base_prompt = (
@@ -189,11 +213,15 @@ def build_topics_gen_prompt(texts, business_text, no_of_topics):
     
     return full_text
 
-def build_prompt_bulk_generation(item: Item) -> str:
+def build_prompt_bulk_generation(item: Item, businessText: str) -> str:
+    businessCategory = businessText["category"]
+    businessDescription = businessText["description"]
     base_prompt = (
         f"Write a professional social media post, about {item.length} words long, "
         f"for the business {item.bzname}. The topic of post is: {item.purpose}, "
         f"and using a {item.preferredTone} tone. "
+        f"Business Category: {businessCategory}. "
+        f"Business Description: {businessDescription} " 
     )
     
     if item.website and item.website != "":

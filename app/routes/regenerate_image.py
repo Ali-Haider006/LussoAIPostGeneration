@@ -153,10 +153,10 @@ async def regenerate_image(
 
         logger.info(f"Generated font: {font}")
 
-        text_image = add_text_overlay(image, tagline, image_style, font)
+        final_image_bytes = add_text_overlay(image, tagline, image_style, font, logo_bytes)
         
         logger.debug("Downloading and adding logo", extra={"request_id": request_id})
-        final_image_bytes = overlay_logo(text_image, logo_bytes)
+        # final_image_bytes = overlay_logo(text_image, logo_bytes)
         
         # Upload to S3
         image_name = f"gen_post_{uuid.uuid4().hex}.jpeg"

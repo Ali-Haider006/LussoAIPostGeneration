@@ -1,5 +1,5 @@
-from PIL import Image, ImageDraw, ImageFont
-import numpy as np
+# from PIL import Image, ImageDraw, ImageFont
+# import numpy as np
 
 # def calculate_brightness(image):
 #     grayscale_image = image.convert("L")
@@ -72,38 +72,64 @@ import numpy as np
 #     "./overlayed_images/output.png"
 # )
 
-image = Image.open("./gen_post_5.jpeg").convert("RGBA")
-width, height = image.size
-image_gray = image.convert('L')
+# image = Image.open("./gen_post_5.jpeg").convert("RGBA")
+# width, height = image.size
+# image_gray = image.convert('L')
 
-bg_width = int(width * 0.7)
-bg_height = int(height * 0.2)
+# bg_width = int(width * 0.7)
+# bg_height = int(height * 0.2)
+
+# positions = [
+#     "top-left", "center-left", "bottom-left",
+#     "top-right", "center-right", "bottom-right"
+# ]
+
+# position_scores = []
+# for position in positions:
+#     x = 0 if "left" in position else width - bg_width
+#     if position.startswith("top"):
+#         y = int(height * 0.15)
+#     elif position.startswith("center"):
+#         y = (height - bg_height) // 2
+#     else:
+#         y = int(height * 0.75)
+    
+#     if x + bg_width > width or y + bg_height > height:
+#         continue
+    
+#     roi = image_gray.crop((x, y, x + bg_width, y + bg_height))
+#     roi_array = np.array(roi)
+#     variance = np.var(roi_array)
+#     position_scores.append((position, variance))
+
+# print(position_scores)
+
+# best_position = min(position_scores, key=lambda x: x[1])[0] if position_scores else "top-left"
+
+# print(best_position)
 
 positions = [
     "top-left", "center-left", "bottom-left",
     "top-right", "center-right", "bottom-right"
 ]
 
-position_scores = []
-for position in positions:
-    x = 0 if "left" in position else width - bg_width
-    if position.startswith("top"):
-        y = int(height * 0.15)
-    elif position.startswith("center"):
-        y = (height - bg_height) // 2
+def get_opposite_position(best_position):
+    logo_position_list = best_position.split("-")
+    logo_position = ""
+
+    if logo_position_list[0] == "top" or logo_position_list[0] == "center":
+        logo_position = "bottom"
     else:
-        y = int(height * 0.75)
-    
-    if x + bg_width > width or y + bg_height > height:
-        continue
-    
-    roi = image_gray.crop((x, y, x + bg_width, y + bg_height))
-    roi_array = np.array(roi)
-    variance = np.var(roi_array)
-    position_scores.append((position, variance))
+        logo_position = "top"
 
-print(position_scores)
+    if logo_position_list[1] == "left":
+        logo_position += "-right"
+    else:
+        logo_position += "-left"
+    return logo_position
 
-best_position = min(position_scores, key=lambda x: x[1])[0] if position_scores else "top-left"
+test_positions = ["top-left", "center-left", "bottom-left", "top-right", "center-right", "bottom-right"]
 
-print(best_position)
+for pos in test_positions:
+    opposite = get_opposite_position(pos)
+    print(f"Original: {pos}, Opposite: {opposite}")

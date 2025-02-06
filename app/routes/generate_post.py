@@ -7,6 +7,7 @@ from app.services.prompt_building import build_prompt_generation, build_prompt_t
 from app.services.api_calls import fetch_response, fetch_image_response
 from app.services.image_processing import overlay_logo, add_text_overlay, generate_random_hex_color
 from app.services.s3 import upload_image_to_s3, BUCKET_NAME
+from app.services.text_processing import get_text_business
 from typing_extensions import Annotated
 from app.utils.download_image_from_url import download_image_from_url
 from app.core.logger import logger
@@ -16,6 +17,7 @@ from app.utils.constants import FONT_LIST
 from app.services.prompt_building import build_prompt_font_selection
 from app.utils.validate_font import get_valid_font
 import traceback
+import json
 
 router = APIRouter()
 
@@ -28,6 +30,7 @@ async def generate_post(
     website: Annotated[str, Form(...)] = "",
     hashtags: bool = Form(...),
     style: str= Form(...),
+    businessDescription: str = Form(...),
     logo: str = Form(...),
     model: Annotated[str, Form(..., min_length=3, max_length=50)] = "claude-3-5-haiku-20241022"
 ):
@@ -53,7 +56,9 @@ async def generate_post(
             color_proportions = extract_color_proportions(output_image)
             colors = ", ".join([ sub['colorCode'] for sub in color_proportions ])
 
-            prompt = build_prompt_generation(item)
+            businessText = get_text_business(json.loads(businessDescription))
+
+            prompt = build_prompt_generation(item, businessText)
             logger.info(f"Generating post with prompt: {prompt}")
 
             post = fetch_response(prompt, item.model)
@@ -88,9 +93,9 @@ async def generate_post(
 
             logger.info(f"Generated font: {font}")
 
-            text_image = add_text_overlay(image, tagline, image_style, font)
+            final_image_bytes = add_text_overlay(image, tagline, image_style, font, logo_bytes)
 
-            final_image_bytes = overlay_logo(text_image, logo_bytes)
+            # final_image_bytes = overlay_logo(text_image, logo_bytes)
 
             image_name = f"gen_post_{uuid.uuid4().hex}.jpeg"
             await upload_image_to_s3(final_image_bytes, image_name) 

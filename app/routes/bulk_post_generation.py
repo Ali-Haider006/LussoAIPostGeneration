@@ -27,7 +27,8 @@ async def process_single_post(
     logo_bytes: bytes,
     output_image: Image.Image,
     color_proportions: List[dict],
-    model: str
+    model: str,
+    business_text: dict
 ) -> dict:
     """Process a single post generation with all required steps."""
     try:
@@ -35,7 +36,7 @@ async def process_single_post(
         item.purpose = topic
         
         # Generate post content
-        prompt = build_prompt_bulk_generation(item)
+        prompt = build_prompt_bulk_generation(item, business_text)
         post_res = fetch_response(prompt, item.model)
         
         # Generate tagline
@@ -58,8 +59,8 @@ async def process_single_post(
         logger.info(f"Generated font: {font}")
         
         # Process image with overlays
-        text_image = add_text_overlay(image, tagline, "test", font)
-        final_image_bytes = overlay_logo(text_image, logo_bytes)
+        final_image_bytes = add_text_overlay(image, tagline, "test", font, logo_bytes)
+        # final_image_bytes = overlay_logo(text_image, logo_bytes)
         
         # Upload to S3
         image_name = f"gen_post_{uuid.uuid4().hex}.jpeg"
@@ -167,7 +168,7 @@ async def bulk_post_generation(websocket: WebSocket, client_id: str):
                 try:
                     post_data = await process_single_post(
                         topic, item, logo_bytes, output_image, 
-                        color_proportions, item.model
+                        color_proportions, item.model, business_text
                     )
                     posts.append(post_data)
                     progress_message = {
