@@ -25,11 +25,11 @@ def build_prompt_generation(item: Item, businessText: str) -> str:
 def build_prompt_tagline(item: Item, post: str) -> str:
     base_prompt = (
         f"Create a social media image tagline for '{post}' that contains TWO DISTINCT PARTS separated by a line break: "
-        f"1) A short, memorable slogan (2-4 words) using alliteration, rhyme, or wordplay\n"
-        f"2) A 4-5 word descriptive text explaining {item.purpose} for {item.bzname}\n\n"
+        f"1) A short, memorable slogan (5-6 words) using alliteration, rhyme, or wordplay\n"
+        f"2) A 6-7 word descriptive text explaining {item.purpose} for {item.bzname}\n\n"
         f"Structure: [Catchy Phrase]\\n[Clear Description]\n"
-        f"Example 1: 'Fresh Finds Forever\\nQuality Goods Daily Drop'\n"
-        f"Example 2: 'Style Unbound\\nTrendsetting Apparel Solutions'\n\n"
+        f"Example 1: 'Guardians at the Gate Standing Strong\\Reliable security for events businesses and properties'\n"
+        f"Example 2: 'Power Up Protect Prevail Without Limits\\Cutting-edge IT solutions for security scalability and success'\n\n"
         f"Guidelines:\n"
         f"- Keep both parts completely separate\n"
         f"- First part: punchy and emotional\n"
@@ -45,8 +45,8 @@ def build_prompt_tagline(item: Item, post: str) -> str:
 def build_prompt_tagline_no_purpose(item: Item, post: str) -> str:
     base_prompt = (
         f"Create a social media image tagline for '{post}' that contains TWO DISTINCT PARTS separated by a line break: "
-        f"1) A short, memorable slogan (2-4 words) using alliteration, rhyme, or wordplay\n"
-        f"2) A 4-5 word descriptive text explaining {item.purpose} for {item.bzname}\n\n"
+        f"1) A short, memorable slogan (5-6 words) using alliteration, rhyme, or wordplay\n"
+        f"2) A 6-7 word descriptive text explaining {item.purpose} for {item.bzname}\n\n"
         f"Structure: [Catchy Phrase]\\n[Clear Description]\n"
         f"Example 1: 'Fresh Finds Forever\\nQuality Goods Daily Drop'\n"
         f"Example 2: 'Style Unbound\\nTrendsetting Apparel Solutions'\n\n"
